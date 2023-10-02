@@ -1,6 +1,7 @@
+/*
 MIT License
 
-Copyright (c) 2023 Henrique Ferraz de Arruda, Kleber Oliveira
+Copyright (c) 2023 Henrique F. de Arruda, Kleber A. Oliveira
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +20,30 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+*/
+
+#include "utils.h"
+
+bool uintIsInArray(unsigned int number, unsigned int *array, unsigned int arraySize){
+    for (unsigned int i=0; i<arraySize; i++){
+        if (array[i] == number){
+            return true;
+        }
+    }
+    return false;
+}
+
+unsigned int uintWhereInArray(unsigned int item, unsigned int *array, unsigned int arraySize){
+    for (unsigned int i=0; i<arraySize; i++){
+        if (array[i] == item){
+            return i;
+        }
+    }
+    printf("Error: number not found in array!\n");
+    return EXIT_FAILURE;
+}
+
+FLOAT drawRandomFLOATNumber(){
+    FLOAT number = (FLOAT) drand48();
+    return number;
+}

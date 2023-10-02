@@ -1,6 +1,7 @@
+/*
 MIT License
 
-Copyright (c) 2023 Henrique Ferraz de Arruda, Kleber Oliveira
+Copyright (c) 2023 Henrique F. de Arruda, Kleber A. Oliveira
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +20,34 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+*/
+#include "utils.h"
+
+typedef struct {
+    unsigned int vCount;
+    unsigned int **invertedAdjlist;
+    unsigned int *neighborsCount;
+    bool isDirected;
+} Network;
+
+typedef struct {
+    unsigned int source;
+    unsigned int target;
+} Edge;
+
+typedef struct {
+    bool isDirected;
+    unsigned int vCount;
+    unsigned int eCount;
+    Edge *edges;
+} EdgeList;
+
+void edgeList2Network(Network *network, EdgeList edgeList, bool verbose);
+void network2EdgeList(Network *network, EdgeList *edgeList, bool verbose);
+void printNetwork(Network *network);
+void rewireConnectionNewTarget(Network *network, unsigned int nodeId, unsigned int target, unsigned int newTarget);
+bool rewireConnectionToRandom(Network *network, unsigned int nodeId, unsigned int target);
+unsigned int randomNeighbor(Network *network, unsigned int agent);
+unsigned int randomNode(Network *network);
+void destroyNetwork(Network *network);
+
