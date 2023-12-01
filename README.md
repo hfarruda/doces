@@ -1,2 +1,2 @@
-# opiniondynamics
-Experimental library to simulate opinion dynamics on complex networks
+# doces
+Experimental library to simulate opinion dynamics on adaptive complex networks
