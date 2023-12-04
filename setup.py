@@ -79,7 +79,7 @@ with open("README.md", "r") as fh:
 
 building_on_windows = platform.system() == "Windows"
 
-package_name = "opiniondynamics"
+package_name = "doces"
 
 with open(os.path.join(package_name,"Python", "version.h"),"rt") as fd:
     version = fd.readline().strip().split(" ")[-1]
@@ -92,10 +92,10 @@ setup(
     author="Henrique F. de Arruda and Kleber A. Oliveira",
     author_email="henrique.f.arruda@centai.eu, kleber.oliveira@centai.eu",
     setup_requires=['wheel',"numpy"],
-    description="Experimental library to simulate opinion dynamics on complex networks",
+    description="DOCES is an experimental library to simulate opinion dynamics on complex networks",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/hfarruda/OpinionDynamics",
+    url="https://github.com/hfarruda/doces",
     packages=setuptools.find_packages(),
     classifiers=[
             "Programming Language :: Python :: 3",

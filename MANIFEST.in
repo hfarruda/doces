@@ -1,2 +1,2 @@
-include opiniondynamics-core/Source/*.h
-include opiniondynamics-core/Python/*.h
+include doces-core/Source/*.h
+include doces-core/Python/*.h

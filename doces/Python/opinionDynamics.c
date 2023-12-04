@@ -1064,7 +1064,7 @@ static PyModuleDef simulator_mod = {PyModuleDef_HEAD_INIT,
 										 .m_free = NULL};
 
 PyMODINIT_FUNC
-PyInit_opiniondynamics_core(void)
+PyInit_doces_core(void)
 {
 	import_array();
 

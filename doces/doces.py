@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 import numpy as np
-import opiniondynamics_core as core
+import doces_core as core
 
 #Variables used to define probabilities
 COSINE = 0 #COS_X
