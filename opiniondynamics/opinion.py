@@ -35,19 +35,21 @@ CUSTOM = 5 #This shall be used when the postng filter types are manually defined
 class Opinion_dynamics(core.Dynamics):
     """
     Class for the simulation of the dynamics.
+
     Parameters
     ----------
-        vertex_count : integer
-                Number of network vertices.
-                
-        edges : numpy array
-            Array of the graph edges, with the shape of (number of edges, 2).
-        
-        directed: boolean
-            Directed network (True) or undirected network (False). True by default.
-        
-        verbose: boolean
-            If True verbose is on.
+    vertex_count : int
+        Number of network vertices.
+
+    edges : numpy array
+        Array of the graph edges, with the shape of (number of edges, 2).
+
+    directed : bool, optional
+        Directed network (True) or undirected network (False). True by default.
+
+    verbose : bool, optional
+        If True, verbose mode is enabled.
+
     """
     def __init__(self, vertex_count, edges, directed = True, verbose = True):
         edges = np.array(edges)
@@ -77,7 +79,58 @@ class Opinion_dynamics(core.Dynamics):
                           verbose = True,
                           rand_seed = None):
         """
-        Write doccumentation here!!!
+         Simulate opinion dynamics.
+
+        Parameters
+        ----------
+        number_of_iterations : int
+            Number of iterations for the simulation.
+
+        phi : float
+            A parameter that controls the starting point of the "receiving function".
+            If this function is not COSINE, STRETCHED_HALF_COSINE, or COS_X_2, this parameter will not change the dynamics.
+
+        mu : float
+            Innovation parameter. Controls the probability of re-posting an information from the feed. If mu = 0, there is no innovation and if mu = 1, all the posts are new and the feed posts are never re-posted.
+
+        posting_filter : numpy array
+            An array of integers representing the posting filter.
+
+        receiving_filter : numpy array
+            An array of integers representing the receiving filter.
+
+        b : numpy array, optional
+            An optional parameter. Default is None.
+
+        feed_size : int, optional
+            Size of the feed. Default is 5.
+
+        rewire : bool, optional
+            If True, rewire the network. Default is True.
+
+        cascade_stats_output_file : str, optional
+            Output file for cascade statistics. Default is None.
+
+        min_opinion : float, optional
+            Minimum opinion value. Default is -1.
+
+        max_opinion : float, optional
+            Maximum opinion value. Default is 1.
+
+        delta : float, optional
+            A parameter. Default is 0.1.
+
+        verbose : bool, optional
+            If True, verbose output is enabled. Default is True.
+
+        rand_seed : int, optional
+            Random seed for reproducibility. Default is None.
+
+        Returns
+        -------
+        out : dict
+            A dictionary containing 'b' (opinions) and 'edges' (edge list).
+        
         """
         kwargs = {"number_of_iterations": number_of_iterations,
                   "min_opinion": min_opinion, 
@@ -110,36 +163,54 @@ class Opinion_dynamics(core.Dynamics):
     
     def set_posting_filter(self, posting_filter):
         """
-        Write doccumentation here!
+        Set the posting filter.
+
         Parameters
         ----------
-        posting_filter : numpy array of integers (the array len needs to be vertex_count).
+        posting_filter : numpy array of integers
+            An array representing the posting filter. The array length needs to be vertex_count.
+        
         """
         posting_filter = np.array(posting_filter, dtype=int)
         core.Dynamics._set_posting_filter(self, posting_filter)
 
     def set_receiving_filter(self, receiving_filter):
         """
-        Write doccumentation here!
+        Set the receiving filter.
+
         Parameters
         ----------
-        receiving_filter : numpy array of integers (the array len needs to be vertex_count).
+        receiving_filter : numpy array of integers
+            An array representing the receiving filter. The array length needs to be vertex_count.
+
         """
         receiving_filter = np.array(receiving_filter, dtype=int)
         core.Dynamics._set_receiving_filter(self, receiving_filter)
 
     def set_stubborn(self, stubborn):
         """
-        Write doccumentation here!
-        Set nodes that never change their opinions (numpy array of integers).
+        Set nodes that never change their opinions.
+
         Parameters
         ----------
-        stubborn : numpy array of integers (the array len needs to be vertex_count).
+        stubborn : numpy array of integers
+            An array representing nodes that never change their opinions. The array length needs to be vertex_count.
+        
         """
         stubborn = np.array(stubborn, dtype=int)
         core.Dynamics._set_stubborn(self, stubborn)
 
     def get_cascade_stats_dict(self):
+        """
+        Get the cascade statistics dictionary.
+
+        Returns
+        -------
+        cascade_stats_dict : dict
+            Dictionary containing cascade statistics:
+            'post_id', 'theta', 'count' (counts the number of times it was posted), 'cascade_size', 'birth', 'death', 'live_posts', and 'user_opinion'.
+        
+        """
         if self.generated_cascade_stats_dict:
             return self._cascade_stats_dict
         
@@ -156,6 +227,16 @@ class Opinion_dynamics(core.Dynamics):
         return self._cascade_stats_dict
 
     def get_cascade_stats_post_id2stats_dict(self):
+        """
+        Get the cascade statistics dictionary, in which the keys are post ids.
+
+        Returns
+        -------
+        post_id2stats_dict : dict
+            Dictionary containing cascade statistics of the properties:
+            'post_id', 'theta', 'count' (counts the number of times it was posted), 'cascade_size', 'birth', 'death', 'live_posts', and 'user_opinion'.
+        
+        """
         if self.generated_post_id2stats_dict:
             return self._post_id2stats_dict
         
@@ -165,6 +246,3 @@ class Opinion_dynamics(core.Dynamics):
         self.generated_post_id2stats_dict = True
         return self._post_id2stats_dict
     
-    # def __del__(self):
-    #     print("Destructor")
-    #     core.Dynamics.force_dealloc(self)
