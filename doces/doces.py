@@ -48,7 +48,7 @@ class Opinion_dynamics(core.Dynamics):
         Directed network (True) or undirected network (False). True by default.
 
     verbose : bool, optional
-        If True, verbose mode is enabled.
+        If True, verbose mode is enabled. True by default.
 
     """
     def __init__(self, vertex_count, edges, directed = True, verbose = True):
@@ -100,7 +100,7 @@ class Opinion_dynamics(core.Dynamics):
             An array of integers representing the receiving filter.
 
         b : numpy array, optional
-            An optional parameter. Default is None.
+            An array of float numbers, representing the opinions of the agents. Default is None.
 
         feed_size : int, optional
             Size of the feed. Default is 5.
@@ -118,7 +118,7 @@ class Opinion_dynamics(core.Dynamics):
             Maximum opinion value. Default is 1.
 
         delta : float, optional
-            A parameter. Default is 0.1.
+            A parameter that defiens how much the opinion changes when it is realigned. Default is 0.1.
 
         verbose : bool, optional
             If True, verbose output is enabled. Default is True.
@@ -189,12 +189,12 @@ class Opinion_dynamics(core.Dynamics):
 
     def set_stubborn(self, stubborn):
         """
-        Set nodes that never change their opinions.
+        Set users that never change their opinions.
 
         Parameters
         ----------
         stubborn : numpy array of integers
-            An array representing nodes that never change their opinions. The array length needs to be vertex_count.
+            An array representing users (nodes) that never change their opinions. The array length needs to be vertex_count.
         
         """
         stubborn = np.array(stubborn, dtype=int)
