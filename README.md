@@ -1,20 +1,33 @@
 # DOCES
-DOCES (Dynamical Opinion Clusters Exploration Suite) is an experimental library to simulate opinion dynamics on adaptive complex networks.
+DOCES (Dynamical Opinion Clusters Exploration Suite) is an experimental Python library to simulate opinion dynamics on adaptive complex networks. Its background is implemented in C for performance.
 
+It requires python headers and a C11 compatible compiler, such as gcc or clang. To install it, run the script `setup.py`.
 
+```bash
+python setup.py build_ext --inplace install
 ```
+
+Once installed, you can setup the agent-based simulation by instantiating an object with the constructor `Opinion_dynamics()` with a network, like in the example below.
+
+```python
 import doces
 # Initializes the network parameters
 ...
 # Creates a DOCES object.
 od = doces.Opinion_dynamics( 
     vertex_count, 
-    edges, 
+    edges,
     directed)
 ```
 
+The constructor takes as arguments features of the network connecting agents. They are:
+- `vertex_count` - number of nodes/agents in the network;
+- `edges` - a python list of 2-tuples of nodes denoting the network edges ((source, target) in the case it is directed);
+- `directed` - a boolean indicating whether the network is directed or not;
 
-```
+Once the `od` object is initialized, the simulation can be performed by calling its method `simulate_dynamics()` as
+
+```python
 # Initializes the dynamics parameters
 ...
 # Run the dynamics
@@ -39,25 +52,7 @@ edge_list = output_dictionary["edges"]
 ```
 
 
-
-```
-# To get a dictionary with all information
-stats_dict = od.get_cascade_stats_dict()
-
-# The contents of the output dictionary are
-# stats_dict = {
-# "post_id": od.post_ids,
-# "theta": od.post_thetas,
-# "count": od.post_posted_counts,
-# "cascade_size": od.post_cascade_sizes,
-# "birth": od.post_births,
-# "death": od.post_deaths,
-# "live_posts": od.post_live_post_counts,
-# "user_opinion": od.post_user_opinions
-# }
-```
-
-```
+```python
 # Initializes the lists to be set
 ...
 # Set the posting filter
