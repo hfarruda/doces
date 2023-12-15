@@ -59,7 +59,7 @@ The method outputs are a list `opinions` of continuous values between `min_opini
 
 - `number_of_iterations` - number of iterations the model runs for;
 - `phi` - a float number which controls the receiving filter;
-- `posting_filter` - an integer from 0 to 5 to set which function filters posting activity;
+- `posting_filter` - an integer from 0 to 5 to set which function filters posting activity, according to the below specification.
 - `receiving_filter` - ;
 - `b` - ;
 - `feed_size` - ;
@@ -70,7 +70,13 @@ The method outputs are a list `opinions` of continuous values between `min_opini
 - `verbose` - ;
 - `rand_seed` - ;
 
+The filter functions are predefined in the library in the variables  
+- 0: `COSINE`: Controversial posting rule (eq. 1);
+- 2: `UNIFORM`: Priority receiving rule;
+- 3: `HALF_COSINE` Aligned posting rule (eq. 2),  
+- 5:`CUSTOM` Allows different filters to be passed as a list of integers (with size equal to the number of agents).
 
+To use option 5, you can call the methods `set_posting_filter()` and `set_receiving_filter()`, as in the example below. Additionally, agents can be set as stubborn by passing a list with integers indicating those agents to the method `set_stubborn()`. Remember to do this before calling `simulate_dynamics()`.
 
 ```python
 # Initializes the lists to be set
@@ -84,10 +90,3 @@ od.set_receiving_filter(receiving_filter)
 # Set stubborn users 
 od.set_stubborn(stubborn_users)
 ```
-
-
-
-
-
-
-
