@@ -1,11 +1,15 @@
 # DOCES
 DOCES (Dynamical Opinion Clusters Exploration Suite) is an experimental Python library to simulate opinion dynamics on adaptive complex networks. Its background is implemented in C for performance.
 
+# INSTALL
+
 It requires python headers and a C11 compatible compiler, such as gcc or clang. To install it, run the script `setup.py`.
 
 ```bash
 python setup.py build_ext --inplace install
 ```
+
+# USAGE
 
 Once installed, you can setup the agent-based simulation by instantiating an object with the constructor `Opinion_dynamics()` with a network, like in the example below.
 
@@ -34,13 +38,13 @@ Once the `od` object is initialized, the simulation can be performed by calling 
 output_dictionary = od.simulate_dynamics(
     number_of_iterations,
     phi,
-    mu, 
+    1, 
     posting_filter, 
     receiving_filter,
     b = None,
     feed_size = 5,
     rewire = True,
-    cascade_stats_output_file = None,
+    None,
     min_opinion = -1, 
     max_opinion = 1,
     delta = 0.1,
@@ -50,6 +54,22 @@ output_dictionary = od.simulate_dynamics(
 opinions = output_dictionary["b"]
 edge_list = output_dictionary["edges"]
 ```
+
+The method outputs are a list `opinions` of continuous values between `min_opinion` and `max_opinion` for each agent and a python list of 2-tuples with the network structure after the simulation is finished. Its inputs are:
+
+- `number_of_iterations` - number of iterations the model runs for;
+- `phi` - a float number which controls the receiving filter;
+- `posting_filter` - an integer from 0 to 5 to set which function filters posting activity;
+- `receiving_filter` - ;
+- `b` - ;
+- `feed_size` - ;
+- `rewire` - ;
+- `min_opinion` - ;
+- `max_opinion` - ;
+- `delta` - ;
+- `verbose` - ;
+- `rand_seed` - ;
+
 
 
 ```python
