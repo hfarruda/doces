@@ -65,7 +65,7 @@ The method outputs are a list `opinions` of continuous values between `min_opini
 - `rewire` - boolean to allow rewiring in each iteration or not;
 - `min_opinion` - float corresponding to the minimum opinion value agents can have;
 - `max_opinion` - float corresponding to the maximum opinion value agents can have;
-- `delta` - float corresponding the increment (or decrement) applied to opinions in each iteration;
+- `delta` - float corresponding to the increment (or decrement) applied to opinions in each iteration;
 - `verbose` - boolean which allows the code to print details of each simulation;
 - `rand_seed` - float used as seed for random number generation;
 
@@ -89,3 +89,6 @@ od.set_receiving_filter(receiving_filter)
 # Set stubborn users 
 od.set_stubborn(stubborn_users)
 ```
+
+# DISCLAIMER
+```Since this code will be publicly available via pip, we have added a description of the MIT license in headers. However, this current version *DOES NOT FOLLOW THE LICENSE* and thus should not be redistributed or used as it is now. The purpose of this code is restricted to peer reviewing.```
