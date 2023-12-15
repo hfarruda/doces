@@ -4,7 +4,7 @@ from scipy.stats import gaussian_kde
 import matplotlib.colors as mcolors
 import matplotlib.cm as cm
 import igraph as ig
-import opiniondynamics as od
+import doces as od
 from tqdm import tqdm
 from scipy.stats import kurtosis
 from scipy.stats import skew

@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2023 Henrique F. de Arruda, Kleber A. Oliveira
+Copyright (c) 2023 Henrique F. de Arruda, Kleber A. Oliveira, and Yamir Moreno
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -98,7 +98,6 @@ unsigned int getFeedSize(Feeds *feeds, unsigned int v){
     return feeds->numberOfElements[v];
 }
 
-//Rever esta funçao com cuidado (aonde usa ela):
 void pushFeed(Feeds *feeds, PostList *postList, unsigned int v, unsigned int postId, unsigned long iteration){
     unsigned int position = 0;
     if (feeds->numberOfElements[v] == 0){
@@ -152,7 +151,6 @@ unsigned int popFeed(Feeds *feeds, unsigned int v){
     return postId;
 }
 
-//test if this is working!
 unsigned int getPostFromFeed(Feeds *feeds, unsigned int v){
     unsigned int postId = 0;
     unsigned int position = 0;
