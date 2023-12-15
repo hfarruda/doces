@@ -42,7 +42,7 @@ output_dictionary = od.simulate_dynamics(
     posting_filter, 
     receiving_filter,
     b = None,
-    feed_size = 5,
+    1,
     rewire = True,
     None,
     min_opinion = -1, 
@@ -59,16 +59,15 @@ The method outputs are a list `opinions` of continuous values between `min_opini
 
 - `number_of_iterations` - number of iterations the model runs for;
 - `phi` - a float number which controls the receiving filter;
-- `posting_filter` - an integer from 0 to 5 to set which function filters posting activity, according to the below specification.
-- `receiving_filter` - ;
-- `b` - ;
-- `feed_size` - ;
-- `rewire` - ;
-- `min_opinion` - ;
-- `max_opinion` - ;
-- `delta` - ;
-- `verbose` - ;
-- `rand_seed` - ;
+- `posting_filter` - an integer from 0 to 5 to set which function filters posting activity, according to the below specification.;
+- `receiving_filter` - an integer from 0 to 5 to set which function filters how posts are received, according to the below specification.;
+- `b` - an array of floats corresponding to the initial opinions of agents;
+- `rewire` - boolean to allow rewiring in each iteration or not;
+- `min_opinion` - float corresponding to the minimum opinion value agents can have;
+- `max_opinion` - float corresponding to the maximum opinion value agents can have;
+- `delta` - float corresponding the increment (or decrement) applied to opinions in each iteration;
+- `verbose` - boolean which allows the code to print details of each simulation;
+- `rand_seed` - float used as seed for random number generation;
 
 The filter functions are predefined in the library in the variables  
 - 0: `COSINE`: Controversial posting rule (eq. 1);
