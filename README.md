@@ -89,6 +89,3 @@ od.set_receiving_filter(receiving_filter)
 # Set stubborn users 
 od.set_stubborn(stubborn_users)
 ```
-
-# DISCLAIMER
-```Since this code will be publicly available via pip, we have added a description of the MIT license in headers. However, this current version *DOES NOT FOLLOW THE LICENSE* and thus should not be redistributed or used as it is now. The purpose of this code is restricted to peer reviewing.```
