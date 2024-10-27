@@ -1,7 +1,7 @@
 # DOCES
 DOCES (Dynamical Opinion Clusters Exploration Suite) is an experimental Python library to simulate opinion dynamics on adaptive complex networks. Its background is implemented in C for performance.
 
-# INSTALL
+# Install
 
 It requires python headers and a C11 compatible compiler, such as gcc or clang. To install it, run the script `setup.py`.
 
@@ -9,7 +9,7 @@ It requires python headers and a C11 compatible compiler, such as gcc or clang. 
 python setup.py build_ext --inplace install
 ```
 
-# USAGE
+# Usage
 
 Once installed, you can setup the agent-based simulation by instantiating an object with the constructor `Opinion_dynamics()` with a network, like in the example below.
 
@@ -93,7 +93,7 @@ od.set_receiving_filter(receiving_filter)
 od.set_stubborn(stubborn_users)
 ```
 
-# CITATION REQUEST
+# Citation Request
 
 If you publish a scientific paper using this material, please cite the respective reference(s) as follows.
 
