@@ -95,7 +95,7 @@ od.set_stubborn(stubborn_users)
 
 # CITATION REQUEST
 
-If you publish a scientific paper using this material, please cite the respective paper(s) as follows.
+If you publish a scientific paper using this material, please cite the respective reference(s) as follows.
 
 The standard dynamics developed for undirected networks is cited as follows:
 
