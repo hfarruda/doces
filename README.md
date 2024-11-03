@@ -3,7 +3,7 @@ DOCES (Dynamical Opinion Clusters Exploration Suite) is an experimental Python l
 
 # Install
 
-It requires python headers and a C11 compatible compiler, such as gcc or clang. To install it, run the script `setup.py`.
+It requires Python headers and a C11 compatible compiler, such as gcc or clang. To install it, run the script `setup.py`.
 
 ```bash
 python setup.py build_ext --inplace install
@@ -11,7 +11,7 @@ python setup.py build_ext --inplace install
 
 # Usage
 
-Once installed, you can setup the agent-based simulation by instantiating an object with the constructor `Opinion_dynamics()` with a network, like in the example below.
+Once installed, you can set up the agent-based simulation by instantiating an object with the constructor `Opinion_dynamics()` with a network, like in the example below.
 
 ```python
 import doces
@@ -24,7 +24,7 @@ od = doces.Opinion_dynamics(
     directed)
 ```
 
-The constructor takes as arguments features of the network connecting agents. They are:
+The constructor takes the features of the network connecting agents as arguments. They are:
 - `vertex_count` - number of nodes/agents in the network;
 - `edges` - a python list of 2-tuples of nodes denoting the network edges ((source, target) in the case it is directed);
 - `directed` - a boolean indicating whether the network is directed or not;
@@ -55,11 +55,11 @@ opinions = output_dictionary["b"]
 edge_list = output_dictionary["edges"]
 ```
 
-The method outputs are a list `opinions` of continuous values between `min_opinion` and `max_opinion` for each agent and a python list of 2-tuples with the network structure after the simulation is finished. Its inputs are:
+The method outputs are a list `opinions` of continuous values between `min_opinion` and `max_opinion` for each agent and a Python list of 2-tuples with the network structure after the simulation is finished. Its inputs are:
 
-- `number_of_iterations` - number of iterations the model runs for;
+- `number_of_iterations` - an integer (positive value) that is used as the number of iterations for the model to run;
 - `phi` - a float number which controls the receiving filter;
-- `mu` - a float number that controls the innovation parameter. If mu = 0, there is no innovation and if mu = 1, all the posts are new and the feed posts are never re-posted;
+- `mu` - a float number that controls the innovation parameter. If `mu = 0`, there is no innovation, and if `mu = 1`, all the posts are new and the feed posts are never re-posted;
 - `posting_filter` - an integer from 0 to 5 to set which function filters posting activity, according to the below specification;
 - `receiving_filter` - an integer from 0 to 5 to set which function filters how posts are received, according to the below specification;
 - `b` - an array of floats corresponding to the initial opinions of agents;
@@ -69,7 +69,7 @@ The method outputs are a list `opinions` of continuous values between `min_opini
 - `min_opinion` - a float corresponding to the minimum opinion value agents can have;
 - `max_opinion` - a float corresponding to the maximum opinion value agents can have;
 - `delta` - a float corresponding to the increment (or decrement) applied to opinions in each iteration;
-- `verbose` - a boolean which allows the code to print details of each simulation;
+- `verbose` - a boolean that allows the code to print details of each simulation;
 - `rand_seed` - an integer (positive value) used as a seed for random number generation;
 
 The filter functions are predefined in the library in the variables  
@@ -105,7 +105,7 @@ The dynamics for directed networks, or with the use of particular types of users
 
 - Henrique Ferraz de Arruda, Kleber Andrade Oliveira, and Yamir Moreno. "Echo chamber formation sharpened by priority users." iScience (2024).
 
-The dynamics with feeds (innovation parameter mu < 1) is cited as follows:
+The dynamics with feeds (innovation parameter `mu < 1`) is cited as follows:
 
 - Kleber Andrade Oliveira, Henrique Ferraz de Arruda, and Yamir Moreno. "Mechanistic interplay between information spreading and opinion polarization." arXiv preprint arXiv:2410.17151 (2024).
 
