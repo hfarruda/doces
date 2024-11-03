@@ -64,12 +64,12 @@ The method outputs are a list `opinions` of continuous values between `min_opini
 - `receiving_filter` - an integer from 0 to 5 to set which function filters how posts are received, according to the below specification;
 - `b` - an array of floats corresponding to the initial opinions of agents;
 - `feed_size` - an integer to set the size of the feed. The default value is 5;
-- `rewire` - boolean to allow rewiring in each iteration or not;
-- `cascade_stats_output_file` - String representing the output file path for cascade statistics. The default value is None;
-- `min_opinion` - float corresponding to the minimum opinion value agents can have;
-- `max_opinion` - float corresponding to the maximum opinion value agents can have;
-- `delta` - float corresponding to the increment (or decrement) applied to opinions in each iteration;
-- `verbose` - boolean which allows the code to print details of each simulation;
+- `rewire` - a boolean to allow rewiring in each iteration or not;
+- `cascade_stats_output_file` - a string representing the output file path for cascade statistics. The default value is None;
+- `min_opinion` - a float corresponding to the minimum opinion value agents can have;
+- `max_opinion` - a float corresponding to the maximum opinion value agents can have;
+- `delta` - a float corresponding to the increment (or decrement) applied to opinions in each iteration;
+- `verbose` - a boolean which allows the code to print details of each simulation;
 - `rand_seed` - an integer (positive value) used as a seed for random number generation;
 
 The filter functions are predefined in the library in the variables  
