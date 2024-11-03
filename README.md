@@ -70,7 +70,7 @@ The method outputs are a list `opinions` of continuous values between `min_opini
 - `max_opinion` - float corresponding to the maximum opinion value agents can have;
 - `delta` - float corresponding to the increment (or decrement) applied to opinions in each iteration;
 - `verbose` - boolean which allows the code to print details of each simulation;
-- `rand_seed` - float used as seed for random number generation;
+- `rand_seed` - an integer (positive value) used as a seed for random number generation;
 
 The filter functions are predefined in the library in the variables  
 - 0: `COSINE`: Controversial posting rule (eq. 1);
