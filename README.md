@@ -3,10 +3,10 @@ DOCES (Dynamical Opinion Clusters Exploration Suite) is an experimental Python l
 
 # Install
 
-It requires Python headers and a C11 compatible compiler, such as gcc or clang. To install it, run the script `setup.py`.
+To install DOCES, simply use the following:
 
 ```bash
-python setup.py build_ext --inplace install
+pip install doces
 ```
 
 # Usage
