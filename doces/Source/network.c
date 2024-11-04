@@ -136,7 +136,7 @@ void rewireConnectionNewTarget(Network *network, unsigned int nodeId, unsigned i
 
 bool rewireConnectionToRandom(Network *network, unsigned int target, unsigned int nodeId){
 	//Return false if there is no possoble rewire
-	unsigned int newTarget = (unsigned int) (lrand48() % network->vCount);
+	unsigned int newTarget = (unsigned int) (drawRandomUIntNumber() % network->vCount);
 	unsigned int numberOfTries = 0;
 	bool isDirected = network->isDirected;
 	unsigned int maxNumberOfTries = network->vCount * 100;
@@ -146,7 +146,7 @@ bool rewireConnectionToRandom(Network *network, unsigned int target, unsigned in
             printf("Caution: The maximum number of attempts has been reached and the rewiring has not been performed (in the rewireConnectionToRandom function).\n"); 
             return false;
 		}
-		newTarget = (unsigned int) (lrand48() % network->vCount);
+		newTarget = (unsigned int) (drawRandomUIntNumber() % network->vCount);
 		numberOfTries ++;
 	}
 
@@ -155,11 +155,11 @@ bool rewireConnectionToRandom(Network *network, unsigned int target, unsigned in
 }
 
 unsigned int randomNeighbor(Network *network, unsigned int agent){
-    return network->invertedAdjlist[agent][lrand48() % network->neighborsCount[agent]];
+    return network->invertedAdjlist[agent][drawRandomUIntNumber() % network->neighborsCount[agent]];
 }
 
 unsigned int randomNode(Network *network){
-	 return (unsigned int) (lrand48() % network->vCount);
+	 return (unsigned int) (drawRandomUIntNumber() % network->vCount);
 }
 
 void destroyNetwork(Network *network){
