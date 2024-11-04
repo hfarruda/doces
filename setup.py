@@ -2,7 +2,7 @@
 """
 MIT License
 
-Copyright (c) 2023 Henrique Ferraz de Arruda, Kleber A. Oliveira, and Yamir Moreno
+Copyright (c) 2024 Henrique Ferraz de Arruda, Kleber A. Oliveira, and Yamir Moreno
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,45 +28,63 @@ SOFTWARE.
 
 import setuptools
 from setuptools import setup, Extension
-import os.path;
-import platform;
+import os.path
+import platform
+import sys
 
-enable_parallelism = False #True
+print("Building on:", sys.version)
 
-extraOptions = []
-extraLinkOptions = []
-extraIncludesPaths = []
-extraLibraryPaths = []
+with open("requirements.txt", "r", encoding="utf8") as fh:
+    requirements = fh.readlines()
+
+enable_parallelism = False #False, because this version of DOCES is not implemented in parallel.
+
+extra_options = []
+extra_link_options = []
+extra_includes_paths = []
+extra_library_paths = []
+compiler_options = [
+                "-std=c11",
+                "-Wall",
+                "-Wno-unused-function",
+                "-Wno-deprecated-declarations",
+                "-Wno-sign-compare",
+                "-Wno-strict-prototypes",
+                "-Wno-unused-variable",
+                "-O3",
+                "-funroll-loops",
+                "-fstrict-aliasing"
+            ]
 
 if(platform.system()=="Darwin"):
-    extraOptions = ["-D OSX"]
+    extra_options = ["-D OSX"]
     if(enable_parallelism):
-        extraOptions += ["-DCV_USE_LIBDISPATCH=1"]
+        extra_options += ["-DCV_USE_LIBDISPATCH=1"]
 elif(platform.system()=="Windows"):
-    extraOptions += ["/D WIN32"]
-    extraOptions += ["/D __WIN32__"]
-    compilerOptions = [
+    extra_options += ["/D WIN32"]
+    extra_options += ["/D __WIN32__"]
+    compiler_options = [
                 "/std:c11",
                 "/Wall",
                 "/O2",
             ]
     if(enable_parallelism):
-        extraOptions+=["/D CV_USE_OPENMP=1"]
-        extraOptions+=["/openmp"]
+        extra_options+=["/D CV_USE_OPENMP=1"]
+        extra_options+=["/openmp"]
     
     if("VCPKG_INSTALLATION_ROOT" in os.environ):
-        extraIncludesPaths += [os.path.join(os.environ["VCPKG_INSTALLATION_ROOT"], "installed", "x64-windows-static","include")]
-        extraLibraryPaths += [os.path.join(os.environ["VCPKG_INSTALLATION_ROOT"], "installed", "x64-windows-static","lib")]
+        extra_includes_paths += [os.path.join(os.environ["VCPKG_INSTALLATION_ROOT"], "installed", "x64-windows-static","include")]
+        extra_library_paths += [os.path.join(os.environ["VCPKG_INSTALLATION_ROOT"], "installed", "x64-windows-static","lib")]
 
 elif(platform.system()=="Linux"):
-    extraOptions = ["-D Linux","-D_GNU_SOURCE=1"]
+    extra_options = ["-D Linux","-D_GNU_SOURCE=1"]
     if(enable_parallelism):
-        extraOptions += ["-DCV_USE_OPENMP=1","-fopenmp"]
-        extraLinkOptions+=["-lgomp"]
+        extra_options += ["-DCV_USE_OPENMP=1","-fopenmp"]
+        extra_link_options+=["-lgomp"]
 else:
     if(enable_parallelism):
-        extraOptions += ["-DCV_USE_OPENMP=1","-fopenmp"]
-        extraLinkOptions+=["-lgomp"]
+        extra_options += ["-DCV_USE_OPENMP=1","-fopenmp"]
+        extra_link_options+=["-lgomp"]
 
 # WORKAROUND: https://stackoverflow.com/questions/54117786/add-numpy-get-include-argument-to-setuptools-without-preinstalled-numpy
 class get_numpy_include(object):
@@ -85,12 +103,12 @@ with open(os.path.join(package_name,"Python", "version.h"),"rt") as fd:
     version = fd.readline().strip().split(" ")[-1]
 
 print("Compiling version %s"%version)
-
 setup(
     name=package_name,
     version=version,
-    author="Henrique F. de Arruda and Kleber A. Oliveira",
-    author_email="henrique.f.arruda@centai.eu, kleber.oliveira@centai.eu",
+    author="Henrique F. de Arruda, Kleber A. Oliveira, and Yamir Moreno",
+    author_email="h.f.arruda@gmail.com",
+    install_requires=[req for req in requirements if req[:2] != "# "],
     setup_requires=['wheel',"numpy"],
     description="DOCES is an experimental library to simulate opinion dynamics on complex networks",
     long_description=long_description,
@@ -123,21 +141,10 @@ setup(
                 os.path.join(package_name,"Source"),
                 os.path.join(package_name,"Python"),
                 get_numpy_include()
-            ]+extraIncludesPaths,
-            extra_compile_args=[
-                "-std=c11",
-                "-Wall",
-                "-Wno-unused-function",
-                "-Wno-deprecated-declarations",
-                "-Wno-sign-compare",
-                "-Wno-strict-prototypes",
-                "-Wno-unused-variable",
-                "-O3",
-                "-funroll-loops",
-                "-fstrict-aliasing"
-            ]+extraOptions,
-            extra_link_args=extraLinkOptions,
-            library_dirs=extraLibraryPaths,
+            ]+extra_includes_paths,
+            extra_compile_args=compiler_options+extra_options,
+            extra_link_args=extra_link_options,
+            library_dirs=extra_library_paths,
             libraries = ["getopt"] if building_on_windows else [],
         ),
     ]

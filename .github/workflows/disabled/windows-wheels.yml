@@ -1,0 +1,40 @@
+name: Build_Windows
+
+on: [push]
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      # - name: Provide GCC on Windows
+        # if: ${{ runner.os == 'Windows' }}
+        # uses: msys2/setup-msys2@v2
+      # - name: Tell distutils to use mingw on Windows
+        # if: ${{ runner.os == 'Windows' }}
+        # run: echo "[build]`ncompiler=mingw32" | Out-File -Encoding ASCII ~/pydistutils.cfg
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.7.0
+        # to supply options, put them in 'env', like:
+        env:
+          CIBW_SKIP: "cp27-* pp27-* cp35-* pp35-* *-win32 *win_arm64 pp*"
+          # CIBW_BEFORE_BUILD_WINDOWS: vcpkg install getopt && vcpkg integrate install && vcpkg export getopt --raw && dir
+          CIBW_BEFORE_ALL_WINDOWS: >
+            vcpkg update &&
+            vcpkg install getopt:x64-windows-static &&
+            vcpkg integrate install
+          CIBW_TEST_COMMAND: "python {project}/docs/tutorial/example.py"
+      # - name: Setup tmate session
+      #   if: ${{ failure() }}
+      #   uses: mxschmitt/action-tmate@v3
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
