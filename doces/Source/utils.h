@@ -28,7 +28,6 @@ SOFTWARE.
 #include <time.h>
 #include <stdbool.h>
 #include <math.h>
-#include <unistd.h> // for usleep()
 
 #define __STRINGIFY(x) #x
 #define TOKENTOSTRING(x) __STRINGIFY(x)
