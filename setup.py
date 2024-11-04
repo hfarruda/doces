@@ -123,7 +123,7 @@ setup(
             "Operating System :: POSIX :: Linux",
             "Development Status :: 3 - Alpha",
             "Programming Language :: C",
-            "Topic :: Scientific/Engineering :: Opinion dyanamics",
+            "Topic :: Scientific/Engineering :: Physics",
             "Intended Audience :: Science/Research"
     ],
     python_requires='>=3.6',
