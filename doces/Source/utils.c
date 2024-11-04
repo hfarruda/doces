@@ -50,5 +50,4 @@ FLOAT drawRandomFLOATNumber(){
     #else// Non-Windows implementation using drand48() 
         return (FLOAT) drand48();
     #endif
-    return number;
 }
