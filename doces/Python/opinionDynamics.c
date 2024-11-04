@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2024 Henrique F. de Arruda, Kleber A. Oliveira, and Yamir Moreno
+Copyright (c) 2023 Henrique F. de Arruda, Kleber A. Oliveira, and Yamir Moreno
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,9 +32,8 @@ SOFTWARE.
 #include <Python.h>
 // #include <pthread.h>
 
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 // #define NO_IMPORT_ARRAY
-// #define PY_ARRAY_UNIQUE_SYMBOL simulator_ARRAY_API
+#define PY_ARRAY_UNIQUE_SYMBOL simulator_ARRAY_API
 #include <numpy/arrayobject.h>
 
 
@@ -44,11 +43,11 @@ pyvector(PyObject *objin)
 	return (PyArrayObject *) PyArray_ContiguousFromObject(objin, NPY_FLOAT, 1, 1);
 }
 
-static PyArrayObject *
+static PyObject *
 convertToUIntegerArray(PyObject *object, int minDepth, int maxDepth)
 {
 	int flags = NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_ALIGNED;
-	return (PyArrayObject*) PyArray_FromAny(
+	return (PyObject *) PyArray_FromAny(
 		object, PyArray_DescrFromType(NPY_UINT64), minDepth, maxDepth, flags, NULL);
 }
 
@@ -56,7 +55,7 @@ static PyArrayObject *
 convertToIntegerArray(PyObject *object, int minDepth, int maxDepth)
 {
 	int flags = NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_ALIGNED;
-	return (PyArrayObject*) PyArray_FromAny(
+	return (PyArrayObject *) PyArray_FromAny(
 		object, PyArray_DescrFromType(NPY_INT64), minDepth, maxDepth, flags, NULL);
 }
 
@@ -64,7 +63,7 @@ static PyArrayObject *
 convertToDoubleArray(PyObject *object, int minDepth, int maxDepth)
 {
 	int flags = NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_ALIGNED;
-	return (PyArrayObject*) PyArray_FromAny(object,
+	return (PyArrayObject *) PyArray_FromAny(object,
 							 PyArray_DescrFromType(NPY_FLOAT64),
 							 minDepth,
 							 maxDepth,
@@ -76,7 +75,7 @@ static PyArrayObject *
 convertToFLOATArray(PyObject *object, int minDepth, int maxDepth)
 {
 	int flags = NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_ALIGNED;
-	return (PyArrayObject*) PyArray_FromAny(object,
+	return (PyArrayObject *) PyArray_FromAny(object,
 							 PyArray_DescrFromType(NPY_FLOAT32),
 							 minDepth,
 							 maxDepth,
@@ -95,7 +94,36 @@ pyvector_to_Carrayptrs(PyArrayObject *arrayin)
 	return PyArray_DATA(arrayin); /* pointer to arrayin data as double */
 }
 
-typedef struct _PyDynamics{
+/* ==== Check that PyArrayObject is a double (FLOAT) type and a vector
+				 ============== return 1 if an error and raise exception */
+static int
+not_FLOATvector(PyArrayObject *vec)
+{
+	if (vec->descr->type_num != NPY_FLOAT) {
+		PyErr_SetString(PyExc_ValueError,
+						"In not_FLOATvector: array must be of "
+						"type FLOAT and 1 dimensional (n).");
+		return 1;
+	}
+	return 0;
+}
+
+/* ==== Check that PyArrayObject is a double (FLOAT) type and a vector
+				 ============== return 1 if an error and raise exception */
+// FIXME: make it work for 32bits
+static int
+not_intvector(PyArrayObject *vec)
+{
+	if (vec->descr->type_num != NPY_UINT64) {
+		PyErr_SetString(
+			PyExc_ValueError,
+			"In not_intvector: array must be of type Long and 1 dimensional (n).");
+		return 1;
+	}
+	return 0;
+}
+
+typedef struct _PyDynamics{//Colocar aqui as variáveis que seriam globais
 	PyObject_HEAD Network *network;
 	Feeds *feeds;
 	PostList *postList;
@@ -127,7 +155,8 @@ void PyDynamics_dealloc(PyDynamics *self)
 	Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
-static void PyDynamics_del(struct _object *self_obj) {
+static void PyDynamics_del(struct _object *self_obj) 
+{
 	PyDynamics *self = (PyDynamics *)self_obj; // Cast to your the type
 
 	if (self->verbose){
@@ -147,7 +176,6 @@ static void PyDynamics_del(struct _object *self_obj) {
 		free(self->postingFilterTypes);
 		self->postingFilterTypes = NULL;
 	}
-
 	if (self->verbose)
 		PROGRESS_BAR(3, 8);
 
@@ -180,7 +208,8 @@ static void PyDynamics_del(struct _object *self_obj) {
 	return;
 }
 
-PyObject * PyDynamics_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+PyObject *
+PyDynamics_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
 	PyDynamics *self;
 	self = (PyDynamics *)type->tp_alloc(type, 0);
@@ -194,7 +223,6 @@ int PyDynamics_init(PyDynamics *self, PyObject *args, PyObject *kwds){
 		"vertex_count",
 		"edges",
 		"directed",
-		"signed",
 		"verbose",
 		NULL
 	};
@@ -203,17 +231,15 @@ int PyDynamics_init(PyDynamics *self, PyObject *args, PyObject *kwds){
 	PyArrayObject *edgesArray = NULL;
 	Py_ssize_t vertexCount = 0;
 	int isDirected = 0;
-	int isSigned = 0;
 	int isVerbose = 0;
 
 	if (!PyArg_ParseTupleAndKeywords(args,
 									 kwds,
-									 "nOpp|p",
+									 "nOp|p",
 									 kwlist,
 									 &vertexCount,
 									 &edgesObject,
 									 &isDirected,
-									 &isSigned,
 									 &isVerbose)) {
 		return EXIT_FAILURE;
 	}
@@ -272,8 +298,6 @@ int PyDynamics_init(PyDynamics *self, PyObject *args, PyObject *kwds){
 	}
 
 	self->network = malloc(sizeof(Network));
-	self->network->isSigned = isSigned;
-
  	edgeList2Network(self->network , *edgeList, self->verbose);
 	if (self->verbose && self->network->vCount < 50) 
 		printNetwork(self->network);
@@ -283,12 +307,20 @@ int PyDynamics_init(PyDynamics *self, PyObject *args, PyObject *kwds){
 
 	self->executedIterations = 1;//Starts at 1 because 0 is when the first posts are created.
 	self->rewiringsCount = 0;
+	// if (self->postList){
+	// 	destroyPostList(self->postList);
+	// }
 	self->postList = NULL;
+
+	// if (self->feeds){
+	// 	destroyFeed(self->feeds, self->feeds->feedSize);
+	// }
 	self->feeds = NULL;
 
 	//To be sure that it will be correctly initialized
 	self->postingFilterType = -1;
 	self->receivingFilterType = -1;
+
 
 	if (self->verbose){
 		printf("========================================\n");
@@ -296,11 +328,6 @@ int PyDynamics_init(PyDynamics *self, PyObject *args, PyObject *kwds){
 		printf("========================================\n");
 		printf("Directed:");
 		if (self->network->isDirected)
-			printf(" True \n");	
-		else
-			printf(" False \n");
-		printf("Signed output:");
-		if (self->network->isSigned)
 			printf(" True \n");	
 		else
 			printf(" False \n");
@@ -314,9 +341,13 @@ int PyDynamics_init(PyDynamics *self, PyObject *args, PyObject *kwds){
 	}
 
 	Py_XDECREF(edgesArray);
-
+	// Py_XDECREF(edges);
 	return EXIT_SUCCESS;
 }
+
+// PyMemberDef PyDynamics_members[] = {
+// 	{NULL} /* Sentinel */
+// };
 
 PyObject * PyGetOpinions(PyDynamics *self){
 	PyObject* value = NULL;
@@ -332,41 +363,29 @@ PyObject * PyGetOpinions(PyDynamics *self){
 }
 
 PyObject *PyGetEdgeList(PyDynamics *self){
-	PyObject* pyEdgeList = PyList_New(0);
-	if (self->network && self->network->vCount>0){
+	PyObject* measurementList = PyList_New(0);
+	if (self->network && self->network && self->network->vCount>0){
 		PyObject *value = NULL;
-		PyObject *weight = NULL;
 		EdgeList *edgeListOut = malloc(sizeof(EdgeList));
-		network2EdgeList(self->network, edgeListOut);
+		network2EdgeList(self->network, edgeListOut, self->verbose);
 		PyObject* pyEdge = NULL;
-
 		for (unsigned long int i=0; i<edgeListOut->eCount; i++){
 			pyEdge = PyList_New(0);
-			value = Py_BuildValue("l", edgeListOut->edges[i].source);
-			PyList_Append(pyEdge, value);
-			Py_DECREF(value);
-			
-			value = Py_BuildValue("l", edgeListOut->edges[i].target);
+			value = Py_BuildValue("i", edgeListOut->edges[i].source);
 			PyList_Append(pyEdge, value);
 			Py_DECREF(value);
 
-			if (self->network->isSigned){
-				weight = Py_BuildValue("d", edgeListOut->signWeights[i]);//Weight
-				PyList_Append(pyEdge, weight);
-				Py_DECREF(weight);
-			}
+			value = Py_BuildValue("i", edgeListOut->edges[i].target);
+			PyList_Append(pyEdge, value);
+			Py_DECREF(value);
 
-			PyList_Append(pyEdgeList, pyEdge);
+			PyList_Append(measurementList, pyEdge);
 			Py_DECREF(pyEdge);
 		}
-
 		free(edgeListOut->edges);
-		if (self->network->isSigned){
-			free(edgeListOut->signWeights);
-		}
 		free(edgeListOut);
 	}
-	return pyEdgeList;
+	return measurementList;
 }
 
 Py_ssize_t PyGetRewireCounts(PyDynamics *self){
@@ -782,15 +801,6 @@ PyObject * PyDynamicsSimulateDynamics(PyDynamics *self, PyObject *args, PyObject
 	return Py_BuildValue("", NULL);
 }
 
-PyObject * PyPrintNetwork(PyDynamics *self){
-	printf("========================================\n");
-	printf("Network summary:\n");
-	printf("========================================\n");
-	printNetwork(self->network);
-	printf("========================================\n");
-	return Py_BuildValue("", NULL);
-}
-
 PyObject *PySetPostingFilter(PyDynamics *self, PyObject *args, PyObject *kwds){
 	static char *kwlist[] = {
 		"posting_filter",
@@ -961,15 +971,11 @@ static PyMethodDef PyDynamics_methods[] = {
 	 (PyCFunction)PyDynamicsSimulateDynamics,
 	 METH_VARARGS | METH_KEYWORDS,
 	 DOCTOSTRING(SIMULATE_DYNAMICS_DOC)},
-	{"print_network",
-	 (PyCFunction)PyPrintNetwork,
-	 METH_VARARGS | METH_KEYWORDS,
-	 DOCTOSTRING(PRINT_NETWORK)},
 	 {"print_feeds",
 	 (PyCFunction)PyPrintFeed,
 	 METH_VARARGS | METH_KEYWORDS,
 	 DOCTOSTRING(PRINT_FEEDS_DOC)},
-	 {"_destroy_network",
+	 {"destroy_network",
 	 (PyCFunction)PyDestroyNetwork,
 	 METH_VARARGS | METH_KEYWORDS,
 	 DOCTOSTRING(DESTROY_NETWORK_DOC)},

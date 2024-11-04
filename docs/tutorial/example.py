@@ -68,9 +68,3 @@ out = simulator.simulate_dynamics(
 print(out)
 # print(simulator.get_cascade_stats_post_id2stats_dict())
 del simulator
-
-print("---> Deleted!!!!")
-
-simulator = doces.Opinion_dynamics(vertex_count=vertex_count, edges=edges, directed=directed, verbose=True)
-
-
