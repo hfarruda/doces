@@ -55,7 +55,7 @@ FLOAT drawRandomFLOATNumber(void){
 unsigned int drawRandomUIntNumber(void){
     // FLOAT number = (FLOAT) drand48();
 #ifdef _WIN32
-    return return (unsigned int) rand();
+    return (unsigned int) rand();
 #else// Non-Windows implementation using drand48() 
     return (unsigned int) lrand48();
 #endif
