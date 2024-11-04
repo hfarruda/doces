@@ -23,7 +23,6 @@ SOFTWARE.
 */
 
 #include "post.h"
-#include "utils.h"
 
 void createPostList(PostList *postList){
     postList->numberOfPosts = 0;
