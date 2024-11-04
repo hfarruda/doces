@@ -108,11 +108,11 @@ char establishRandomDistType(){
     char distribution = 0;
     unsigned int selected = 0;
     // selected = (unsigned int) (lrand48() % 3);
-    #ifdef _WIN32
-        selected = (unsigned int)(rand() % 3);
-    #else// On other platforms
-        selected = (unsigned int)(lrand48() % 3);
-    #endif
+#ifdef _WIN32
+    selected = (unsigned int)(rand() % 3);
+#else// On other platforms
+    selected = (unsigned int)(lrand48() % 3);
+#endif
     switch (selected){
         case 0: distribution = COSINE;
         break;
