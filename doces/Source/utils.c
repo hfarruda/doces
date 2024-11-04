@@ -44,6 +44,11 @@ unsigned int uintWhereInArray(unsigned int item, unsigned int *array, unsigned i
 }
 
 FLOAT drawRandomFLOATNumber(){
-    FLOAT number = (FLOAT) drand48();
+    // FLOAT number = (FLOAT) drand48();
+    #ifdef _WIN32
+        return (FLOAT) rand() / RAND_MAX; 
+    #else// Non-Windows implementation using drand48() 
+        return (FLOAT) drand48();
+    #endif
     return number;
 }

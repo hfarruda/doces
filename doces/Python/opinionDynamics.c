@@ -603,7 +603,12 @@ PyObject * PyDynamicsSimulateDynamics(PyDynamics *self, PyObject *args, PyObject
 		if (self->verbose)
 			printf("Setting rand. seed to: %u.\n", randSeed);
 	}
-	srand48((unsigned int) randSeed);
+	// srand48((unsigned int) randSeed);
+	#ifdef _WIN32
+		srand(randSeed); // On Windows, use srand() with randSeed
+	#else
+		srand48(randSeed); // On other platforms, use srand48() with randSeed
+	#endif
 
 	if (!self->network){
 		PyErr_SetString(PyExc_TypeError, "Set the network before executing the dyanamics (set_network).");

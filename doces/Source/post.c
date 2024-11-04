@@ -23,6 +23,7 @@ SOFTWARE.
 */
 
 #include "post.h"
+#include "utils.h"
 
 void createPostList(PostList *postList){
     postList->numberOfPosts = 0;
@@ -251,7 +252,7 @@ void populateFeedRandom(Network *network, Feeds *feeds, PostList *postList, FLOA
     FLOAT theta = 0;
     for (unsigned int i=0; i < network->vCount; i++){
         for (unsigned int j=0; j < feedSize; j++){
-            theta = drand48();
+            theta = drawRandomFLOATNumber();
             theta *= (maxB - minB);
             theta += minB;
             postId = createNewPost(iteration, postList, b[i], theta);
