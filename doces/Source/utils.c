@@ -43,16 +43,16 @@ unsigned int uintWhereInArray(unsigned int item, unsigned int *array, unsigned i
     return EXIT_FAILURE;
 }
 
-FLOAT drawRandomFLOATNumber(){
+FLOAT drawRandomFLOATNumber(void){
     // FLOAT number = (FLOAT) drand48();
 #ifdef _WIN32
-    return (FLOAT) rand() / RAND_MAX; 
+    return (FLOAT) rand() / RAND_MAX;
 #else// Non-Windows implementation using drand48() 
     return (FLOAT) drand48();
 #endif
 }
 
-unsigned int drawRandomUIntNumber(){
+unsigned int drawRandomUIntNumber(void){
     // FLOAT number = (FLOAT) drand48();
 #ifdef _WIN32
     return return (unsigned int) rand();

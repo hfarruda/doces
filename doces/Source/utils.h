@@ -54,5 +54,5 @@ SOFTWARE.
 
 bool uintIsInArray(unsigned int number, unsigned int *array, unsigned int arraySize);
 unsigned int uintWhereInArray(unsigned int item, unsigned int *array, unsigned int arraySize);
-FLOAT drawRandomFLOATNumber();
-unsigned int drawRandomUIntNumber();
+FLOAT drawRandomFLOATNumber(void);
+unsigned int drawRandomUIntNumber(void);
