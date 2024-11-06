@@ -28,7 +28,8 @@ jobs:
             #   CIBW_SOME_OPTION: value
             # remove python 3.12 and pp
             CIBW_SKIP: "cp27-* cp35-* cp36-* cp312-* pp* *-win32 *win_arm64 *i686 *musllinux*"
-            CIBW_BEFORE_ALL_WINDOWS: >
+            CIBW_BEFORE_ALL_WINDOWS: |
+              pip install numpy<1.25 
               vcpkg update &&
               vcpkg install getopt:x64-windows-static &&
               vcpkg integrate install
