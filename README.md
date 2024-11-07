@@ -9,6 +9,11 @@ To install DOCES, simply use the following:
 pip install doces
 ```
 
+If the first command does not find a compatible version of DOCES for your Python version, use the following command to install the package:
+```bash
+pip install git+https://github.com/hfarruda/doces.git
+```
+
 # Usage
 
 Once installed, you can set up the agent-based simulation by instantiating an object with the constructor `Opinion_dynamics()` with a network, like in the example below.
