@@ -17,7 +17,7 @@ jobs:
       # Used to host cibuildwheel
       - uses: actions/setup-python@v3
         with:
-          python-version: "3.x"  #Ensures compatibility with the latest Python version
+          python-version: ${{ matrix.python-version }} 
 
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==2.16.2
@@ -37,7 +37,7 @@ jobs:
         
       - uses: actions/upload-artifact@v4
         with:
-          name: my-artifact-${{ matrix.os }}-${{ matrix.python }}-${{ github.sha }}-${{ github.run_id }} 
+          name: my-artifact-${{ matrix.os }}-${{ matrix.python-version }}-${{ github.sha }}-${{ github.run_id }}
           path: ./wheelhouse/*.whl
           overwrite: true
 
