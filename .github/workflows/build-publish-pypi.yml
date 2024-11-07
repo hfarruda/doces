@@ -25,13 +25,15 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         # to supply options, put them in 'env', like:
         env:
-            CIBW_SKIP: "cp27-* cp35-* cp36-* cp37-* cp38-* pp* *-win32 *win_arm64 *i686 *-musllinux* cp312-manylinux_x86_64"
+            #   CIBW_SOME_OPTION: value
+            # remove python 3.12 and pp
+            CIBW_SKIP: "cp27-* cp35-* cp36-* pp* *-win32 *win_arm64 *i686 *musllinux*"
             CIBW_BEFORE_ALL_WINDOWS: >
               vcpkg update &&
               vcpkg install getopt:x64-windows-static &&
               vcpkg integrate install
             CIBW_TEST_COMMAND: "python {project}/docs/tutorial/example.py"
-        
+
       - uses: actions/upload-artifact@v4
         with:
           name: my-artifact-${{ matrix.os }}
