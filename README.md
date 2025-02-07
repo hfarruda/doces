@@ -1,3 +1,4 @@
+![](figure/brigadeiro.png)
 # DOCES
 DOCES (Dynamical Opinion Clusters Exploration Suite) is an experimental Python library to simulate opinion dynamics on adaptive complex networks. Its background is implemented in C for performance.
 
