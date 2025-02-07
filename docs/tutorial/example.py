@@ -1,11 +1,9 @@
 import numpy as np
 import doces
-# import gc 
-# gc.set_debug(gc.DEBUG_LEAK)
+
 
 vertex_count = 4
-# edges = np.random.randint(0, vertex_count, (vertex_count*4, 2))
-# edges = np.array([(0, 1), (1, 2), (0, 3), (1, 3), (2, 3), (2, 4), (3, 4), (0, 4), (4, 5), (3, 5), (1, 5), (1, 6), (3, 6), (4, 6), (5, 7), (4, 7), (0, 7), (5, 8), (4, 8), (3, 8), (3, 9), (7, 9), (0, 9)])
+
 edges = np.array([(0, 1), (1, 2), (0, 3), (1, 3), (2, 3)])
 verbose = True#True
 directed = True #False#
@@ -14,7 +12,7 @@ rand_seed = np.random.randint(0, 1000000)# 263657#
 print("seed =", rand_seed)
 simulator = doces.Opinion_dynamics(vertex_count=vertex_count, edges=edges, directed=directed, verbose=verbose)
 
-b = [-0.7812723, -0.5168539, 0.48190793, -0.41460833] #np.random.rand(vertex_count) * 2 - 1
+b = [-0.7812723, -0.5168539, 0.48190793, -0.41460833] 
 
 number_of_iterations = 10000
 
