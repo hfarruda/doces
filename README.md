@@ -1,5 +1,5 @@
 <p style="display: flex; align-items: center; margin: 0;">
-    <img src="figure/brigadeiro.png" alt="icon" height="60" style="margin-right: 15px;"/> 
+    <img src="figure/brigadeiro.png" alt="icon" height="150" style="margin-right: 15px;"/> 
 </p>
 
 # DOCES
