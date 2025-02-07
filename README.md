@@ -101,6 +101,11 @@ od.set_receiving_filter(receiving_filter)
 od.set_stubborn(stubborn_users)
 ```
 
+# Tested OS
+
+Linux (Debian and Ubuntu), MacOS, and Windows
+
+
 # Citation Request
 
 If you publish a scientific paper using this material, please cite the respective reference(s) as follows.
