@@ -1,8 +1,6 @@
-<p style="display: flex; align-items: center; margin: 0;">
-    <img src="figure/brigadeiro.png" alt="icon" height="150" style="margin-right: 15px;"/> 
+<p style="display: flex; align-items: center; justify-content: center; margin: 0;">
+    <img src="figure/brigadeiro.png" alt="icon" style="width: 100%; max-width: 600px; height: auto; margin-right: 15px;"/>
 </p>
-
-# DOCES
 
 DOCES (Dynamical Opinion Clusters Exploration Suite) is an experimental Python library to simulate opinion dynamics on adaptive complex networks. Its background is implemented in C for performance.
 
