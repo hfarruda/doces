@@ -105,6 +105,11 @@ od.set_stubborn(stubborn_users)
 
 Linux (Debian and Ubuntu), MacOS, and Windows
 
+# DOCES Architecture
+
+DOCES combines high-performance C code for computational efficiency with Python for an easy-to-use interface. The architecture is modular, with the **Core** implemented in C and **Methods** accessible via Python.
+
+<img src="figure/diagram.png" style="width:90%; display:block; margin:0 auto;">
 
 # Citation Request
 
