@@ -25,7 +25,7 @@ Once installed, you can set up the agent-based simulation by instantiating an ob
 import doces
 # Initializes the network parameters
 ...
-# Creates a DOCES object.
+# Creates a Opinion_dynamics object.
 od = doces.Opinion_dynamics( 
     vertex_count, 
     edges,
