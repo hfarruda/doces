@@ -1,5 +1,5 @@
 <p style="display: flex; align-items: center; justify-content: center; margin: 0;">
-    <img src="https://github.com/hfarruda/doces/blob/main/.github/figures/brigadeiro.png" alt="icon" style="width: 100%; max-width: 600px; height: auto; margin-right: 15px;"/>
+    <img src="https://raw.githubusercontent.com/hfarruda/doces/main/.github/figures/brigadeiro.png" alt="icon" style="width: 100%; max-width: 600px; height: auto; margin-right: 15px;"/>
 </p>
 
 DOCES (Dynamical Opinion Clusters Exploration Suite) is an experimental Python library to simulate opinion dynamics on adaptive complex networks. Its background is implemented in C for performance.
@@ -110,7 +110,7 @@ Linux (Debian and Ubuntu), MacOS, and Windows
 DOCES combines high-performance C code for computational efficiency with Python for an easy-to-use interface. The architecture is modular, with the **Core** implemented in C and **Methods** accessible via Python.
 
 <div align="center">
-  <img src="https://github.com/hfarruda/doces/blob/main/.github/figures/diagram.png" alt="DOCES Architecture" style="width:90%;">
+  <img src="https://raw.githubusercontent.com/hfarruda/doces/main/.github/figures/diagram.png" alt="DOCES Architecture" style="width:90%;">
 </div>
 
 # Citation Request
