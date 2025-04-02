@@ -115,9 +115,16 @@ DOCES combines high-performance C code for computational efficiency with Python 
 
 # Citation Request
 
-If you publish a scientific paper using this material, please cite the respective reference(s) as follows.
+If you publish a scientific paper using this software, please cite the corresponding reference:
 
-The standard dynamics developed for undirected networks is cited as follows:
+Henrique Ferraz de Arruda, Kleber Andrade Oliveira, and Yamir Moreno. "Dynamical opinion clusters exploration suite: Modeling social media opinion dynamics." SoftwareX, Vol. 30, 2025, p. 102136. DOI: 
+[10.1016/j.softx.2025.102136](https://doi.org/10.1016/j.softx.2025.102136).  
+
+[Read the paper here](https://www.sciencedirect.com/science/article/pii/S2352711025001037).
+
+The BibTeX entry for this reference can be found [here](https://raw.githubusercontent.com/hfarruda/doces/main/.github/doces.bib).
+
+In addition, if your work addresses specific aspects of the opinion dynamics modeled in this software, please also cite the relevant references:
 
 - Henrique Ferraz de Arruda, Felipe Maciel Cardoso, Guilherme Ferraz de Arruda, Alexis R. Hernández, Luciano da Fontoura Costa, and Yamir Moreno. "Modelling how social network algorithms can influence opinion polarization." Information Sciences 588 (2022): 265-278.
 
@@ -128,6 +135,3 @@ The dynamics for directed networks, or with the use of particular types of users
 The dynamics with feeds (innovation parameter `mu < 1`) is cited as follows:
 
 - Kleber Andrade Oliveira, Henrique Ferraz de Arruda, and Yamir Moreno. "Mechanistic interplay between information spreading and opinion polarization." arXiv preprint arXiv:2410.17151 (2024).
-
-
-
