@@ -122,7 +122,7 @@ Henrique Ferraz de Arruda, Kleber Andrade Oliveira, and Yamir Moreno. "Dynamical
 
 [Read the paper here](https://www.sciencedirect.com/science/article/pii/S2352711025001037).
 
-The BibTeX entry for this reference can be found [here](https://raw.githubusercontent.com/hfarruda/doces/main/.github/doces.bib).
+The BibTeX entry for this reference can be found [here](https://raw.githubusercontent.com/hfarruda/doces/main/doces.bib).
 
 In addition, if your work addresses specific aspects of the opinion dynamics modeled in this software, please also cite the relevant references:
 
