@@ -1,2 +1,6 @@
-include doces-core/Source/*.h
-include doces-core/Python/*.h
+include requirements.txt
+include doces/Source/*.h
+include doces/Python/*.h
+recursive-include tests *.py
+include docs/tutorial/example.py
+include docs/tutorial/custom_filters.py

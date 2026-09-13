@@ -23,6 +23,9 @@ SOFTWARE.
 """
 import numpy as np
 import doces_core as core
+import warnings as _warnings
+from numbers import Integral as _Integral
+from .filters import ProbabilityTable
 
 #Variables used to define probabilities
 COSINE = 0 #COS_X
@@ -31,6 +34,12 @@ UNIFORM = 2 #EQUAL_TRANSMISSION
 HALF_COSINE = 3 #COS_X_CUT
 RANDOM_DISTR = 4 #MIXED_TRANSMISSION
 CUSTOM = 5 #This shall be used when the postng filter types are manually defined
+REVERSED_HALF_COSINE = 6 #The original rewiring probability
+
+
+class FilterParameterWarning(UserWarning):
+    """Warn that a simulation parameter does not affect active filters."""
+
 
 class Opinion_dynamics(core.Dynamics):
     """
@@ -55,6 +64,10 @@ class Opinion_dynamics(core.Dynamics):
         edges = np.array(edges)
         directed = int(directed)
         core.Dynamics.__init__(self, vertex_count = vertex_count, edges = edges, directed = directed, verbose = verbose)
+        self._filter_vertex_count = int(vertex_count)
+        self._receiving_filter_has_sampled = False
+        self._receiving_filter_uses_phi = False
+        self._receiving_filter_phi_warning_shown = False
         #These variables are used to avoid creating the dictionaries multiple times.
         self.generated_cascade_stats_dict = False
         self._cascade_stats_dict = None
@@ -89,15 +102,20 @@ class Opinion_dynamics(core.Dynamics):
         phi : float
             A parameter that controls the starting point of the "receiving function".
             If this function is not COSINE, STRETCHED_HALF_COSINE, or COS_X_2, this parameter will not change the dynamics.
+            A nonzero value produces FilterParameterWarning once per custom
+            receiving configuration when it contains sampled filters and no
+            native COSINE or STRETCHED_HALF_COSINE filter.
 
         mu : float
             Innovation parameter. Controls the probability of re-posting an information from the feed. If mu = 0, there is no innovation and if mu = 1, all the posts are new and the feed posts are never re-posted.
 
         posting_filter : numpy array
             An array of integers representing the posting filter.
+            Use CUSTOM to activate filters configured by set_posting_filter.
 
         receiving_filter : numpy array
             An array of integers representing the receiving filter.
+            Use CUSTOM to activate filters configured by set_receiving_filter.
 
         b : numpy array, optional
             An array of float numbers, representing the opinions of the agents. Default is None.
@@ -107,6 +125,8 @@ class Opinion_dynamics(core.Dynamics):
 
         rewire : bool, optional
             If True, rewire the network. Default is True.
+            Uses the configured rewiring filter, or the original probability
+            by default. If False, no node rewires, including stubborn nodes.
 
         cascade_stats_output_file : str, optional
             Output file for cascade statistics. Default is None.
@@ -150,7 +170,30 @@ class Opinion_dynamics(core.Dynamics):
         if b is not None:
             b = np.array(b, dtype = np.single)
             kwargs.update({"b": b})
+        if (receiving_filter == CUSTOM and phi != 0
+                and self._receiving_filter_has_sampled
+                and not self._receiving_filter_uses_phi
+                and not self._receiving_filter_phi_warning_shown):
+            _warnings.warn(
+                "phi has no effect on this CUSTOM receiving configuration: "
+                "sampled filters do not use simulation-time phi, and no native "
+                "COSINE or STRETCHED_HALF_COSINE filter is active. Include the "
+                "parameter when constructing the sampled function and configure "
+                "the filter again when it changes."
+                "If phi is intentionally unused, set phi=0 to suppress this warning.",
+                FilterParameterWarning,
+                stacklevel=2,
+            )
+            self._receiving_filter_phi_warning_shown = True
         core.Dynamics._simulate_dynamics(self, **kwargs)
+        if receiving_filter != CUSTOM:
+            # The C boundary discards a prior per-node receiving configuration
+            # when a global selector is used, preserving the legacy behavior.
+            self._receiving_filter_has_sampled = False
+            self._receiving_filter_uses_phi = receiving_filter in (
+                COSINE, STRETCHED_HALF_COSINE
+            )
+            self._receiving_filter_phi_warning_shown = False
         out = {"b": self.opinions, "edges": self.edge_list}
 
         #To allow the variables to be updated
@@ -161,7 +204,7 @@ class Opinion_dynamics(core.Dynamics):
         #####################################
         return out
     
-    def set_posting_filter(self, posting_filter):
+    def set_posting_filter(self, posting_filter, *, grid=None):
         """
         Set the posting filter.
 
@@ -169,12 +212,21 @@ class Opinion_dynamics(core.Dynamics):
         ----------
         posting_filter : numpy array of integers
             An array representing the posting filter. The array length needs to be vertex_count.
-        
-        """
-        posting_filter = np.array(posting_filter, dtype=int)
-        core.Dynamics._set_posting_filter(self, posting_filter)
+            Also accepts one built-in identifier, ProbabilityTable, or callable
+            for all nodes, or a per-node list mixing these types. Activate the
+            configured filters with posting_filter=CUSTOM when simulating.
 
-    def set_receiving_filter(self, receiving_filter):
+        grid : one-dimensional array, optional
+            Required for callables. Each distinct callable is sampled once at
+            each absolute, unnormalized difference. Tables are evaluated in C
+            by their interpolation method and must cover the simulation range.
+            Callables use linear interpolation; use ProbabilityTable.from_function
+            with interpolation="previous" for exact steps.
+
+        """
+        self._set_probability_filter("posting", posting_filter, grid)
+
+    def set_receiving_filter(self, receiving_filter, *, grid=None):
         """
         Set the receiving filter.
 
@@ -182,10 +234,96 @@ class Opinion_dynamics(core.Dynamics):
         ----------
         receiving_filter : numpy array of integers
             An array representing the receiving filter. The array length needs to be vertex_count.
+            Also accepts one built-in identifier, ProbabilityTable, or callable
+            for all nodes, or a per-node list mixing these types. Activate the
+            configured filters with receiving_filter=CUSTOM when simulating.
+            As with existing filters, the posting node selects the receiving
+            filter. Sampled functions receive the absolute difference between
+            the two nodes' opinions; phi affects only native built-in filters.
+
+        grid : one-dimensional array, optional
+            Required for callables; see set_posting_filter. Captured function
+            parameters remain fixed until the filters are configured again.
 
         """
-        receiving_filter = np.array(receiving_filter, dtype=int)
-        core.Dynamics._set_receiving_filter(self, receiving_filter)
+        self._set_probability_filter("receiving", receiving_filter, grid)
+
+    def set_rewiring_filter(self, rewiring_filter=REVERSED_HALF_COSINE, *, grid=None):
+        """Set the probability used when a node considers rewiring.
+
+        Accepts one built-in identifier, ProbabilityTable, or callable for all
+        nodes, or a per-node list mixing these types. Each node uses its own
+        assigned filter when changing its connection. Callables require grid
+        and receive the absolute difference between the two nodes' opinions.
+
+        Calling this method without arguments restores the original rewiring
+        probability: zero for differences <= 1, cos(pi*d/2)**2 otherwise.
+        Existing conditions for considering rewiring are retained. Configured
+        filters have no effect when simulate_dynamics uses rewire=False.
+        """
+        self._set_probability_filter("rewiring", rewiring_filter, grid)
+
+    def _set_probability_filter(self, role, filters, grid):
+        scalar = isinstance(filters, (_Integral, ProbabilityTable)) or callable(filters)
+        if not scalar and role != "rewiring":
+            entries = np.asarray(filters)
+            if not any(isinstance(entry, ProbabilityTable) or callable(entry)
+                       for entry in entries.flat):
+                # Preserve the existing conversions and C path for old arrays.
+                values = np.array(filters, dtype=int)
+                setter = (core.Dynamics._set_posting_filter if role == "posting"
+                          else core.Dynamics._set_receiving_filter)
+                setter(self, values)
+                if role == "receiving":
+                    self._receiving_filter_has_sampled = False
+                    self._receiving_filter_uses_phi = bool(np.any(
+                        (values == COSINE) | (values == STRETCHED_HALF_COSINE)
+                    ))
+                    self._receiving_filter_phi_warning_shown = False
+                return
+
+        if scalar:
+            entries = [filters] * self._filter_vertex_count
+        else:
+            if isinstance(filters, np.ndarray) and filters.ndim != 1:
+                raise ValueError("filters must be a one-dimensional per-node sequence")
+            try:
+                entries = list(filters)
+            except TypeError as error:
+                raise TypeError("filters must be a built-in identifier, table, callable, or per-node sequence") from error
+            if len(entries) != self._filter_vertex_count:
+                raise ValueError("filter sequence length must match vertex_count")
+
+        selectors = np.empty(self._filter_vertex_count, dtype=np.int64)
+        tables = []
+        table_indices = {}
+        for node, entry in enumerate(entries):
+            if isinstance(entry, _Integral):
+                if entry not in (COSINE, STRETCHED_HALF_COSINE, UNIFORM,
+                                 HALF_COSINE, REVERSED_HALF_COSINE):
+                    raise ValueError("per-node built-in filters must be COSINE, STRETCHED_HALF_COSINE, UNIFORM, HALF_COSINE, or REVERSED_HALF_COSINE")
+                selectors[node] = entry
+                continue
+            if not isinstance(entry, ProbabilityTable) and not callable(entry):
+                raise TypeError("each filter must be a built-in identifier, ProbabilityTable, or callable")
+            identity = id(entry)
+            if identity not in table_indices:
+                if isinstance(entry, ProbabilityTable):
+                    table = entry
+                else:
+                    if grid is None:
+                        raise ValueError("grid is required when setting callable filters")
+                    table = ProbabilityTable.from_function(entry, grid)
+                table_indices[identity] = len(tables)
+                tables.append((table.differences, table.probabilities, table.interpolation))
+            selectors[node] = -(table_indices[identity] + 1)
+        core.Dynamics._set_filter_configuration(self, role, selectors, tables)
+        if role == "receiving":
+            self._receiving_filter_has_sampled = bool(tables)
+            self._receiving_filter_uses_phi = bool(np.any(
+                (selectors == COSINE) | (selectors == STRETCHED_HALF_COSINE)
+            ))
+            self._receiving_filter_phi_warning_shown = False
 
     def set_stubborn(self, stubborn):
         """
@@ -245,4 +383,3 @@ class Opinion_dynamics(core.Dynamics):
         self._post_id2stats_dict = {post_id: {prop: self._cascade_stats_dict[prop][i] for prop in properties} for i,post_id in enumerate(self.post_ids)}
         self.generated_post_id2stats_dict = True
         return self._post_id2stats_dict
-    

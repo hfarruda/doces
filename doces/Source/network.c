@@ -85,10 +85,11 @@ void network2EdgeList(Network *network, EdgeList *edgeList, bool verbose){
 }
 
 void printNetwork(Network *network){
-    if (network->isDirected)
+    if (network->isDirected){
         printf("Directed network with %u nodes.\n", network->vCount);
-    else
+    } else {
         printf("Undirected network with %u nodes.\n", network->vCount);
+    }
 
 	printf("Inverted edge list:\n");
 	for (unsigned int target=0; target < network->vCount; target++){

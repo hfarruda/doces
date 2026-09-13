@@ -1,0 +1,26 @@
+# Recommended user environment for DOCES with NumPy 2.
+# From the repository root:
+#   conda env create -f environment.yml
+#   conda activate doces
+# To open the tutorial:
+#   jupyter lab docs/tutorial/tutorial.ipynb
+name: doces
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.14
+  - numpy>=2.5,<3
+  - python-igraph
+  - scipy
+  - tqdm
+  - matplotlib
+  - jupyterlab
+  - ipykernel
+  - pip
+  - pip:
+      # Keep pip from downgrading the NumPy version selected by Conda.
+      - numpy>=2.5,<3
+      - xnetwork
+      # Install DOCES from this checkout (run from the repository root).
+      - .

@@ -6,6 +6,8 @@ DOCES (Dynamical Opinion Clusters Exploration Suite) is an experimental Python l
 
 # Install
 
+DOCES 0.1.0 supports Python 3.9–3.14 and NumPy 2.x. Installation selects a NumPy version compatible with your Python version.
+
 To install DOCES, simply use the following:
 
 ```bash
@@ -16,6 +18,8 @@ If the first command does not find a compatible version of DOCES for your Python
 ```bash
 pip install git+https://github.com/hfarruda/doces.git
 ```
+
+To build a source distribution and wheel and test the installed package in temporary environments, run `bash runtest.sh` from the repository root. Set `PYTHON=/path/to/python` to test a particular interpreter.
 
 # Usage
 
@@ -68,8 +72,8 @@ The method outputs are a list `opinions` of continuous values between `min_opini
 - `number_of_iterations` - an integer (positive value) that is used as the number of iterations for the model to run;
 - `phi` - a float number which controls the receiving filter;
 - `mu` - a float number that controls the innovation parameter. If `mu = 0`, there is no innovation, and if `mu = 1`, all the posts are new and the feed posts are never re-posted;
-- `posting_filter` - an integer from 0 to 5 to set which function filters posting activity, according to the below specification;
-- `receiving_filter` - an integer from 0 to 5 to set which function filters how posts are received, according to the below specification;
+- `posting_filter` - an integer from 0 to 6 to set which function filters posting activity, according to the below specification;
+- `receiving_filter` - an integer from 0 to 6 to set which function filters how posts are received, according to the below specification;
 - `b` - an array of floats corresponding to the initial opinions of agents;
 - `feed_size` - an integer to set the size of the feed. The default value is 5;
 - `rewire` - a boolean to allow rewiring in each iteration or not;
@@ -101,6 +105,61 @@ od.set_receiving_filter(receiving_filter)
 od.set_stubborn(stubborn_users)
 ```
 
+## Python probability functions
+
+`set_posting_filter`, `set_receiving_filter`, and `set_rewiring_filter` also accept a Python function or a `doces.ProbabilityTable`. Pass one choice for all nodes, or a list with one choice per node; lists can mix tables, functions, and built-in filters (`COSINE`, `STRETCHED_HALF_COSINE`, `UNIFORM`, `HALF_COSINE`, and `REVERSED_HALF_COSINE`). Existing integer-array setters continue to work.
+
+```python
+import numpy as np
+
+grid = np.linspace(0.0, 2.0, 1001)
+od.set_posting_filter(lambda difference: np.exp(-difference**2), grid=grid)
+od.set_receiving_filter(doces.ProbabilityTable([0.0, 2.0], [1.0, 0.2]))
+od.set_rewiring_filter(lambda difference: (difference / 2.0)**2, grid=grid)
+# Run with posting_filter=doces.CUSTOM and receiving_filter=doces.CUSTOM.
+```
+
+Functions receive the **absolute, unnormalized difference** and must return a finite scalar probability in `[0, 1]`. Posting uses the difference between a post's value and the posting node's opinion. Receiving uses the difference between the posting node's and follower's opinions; the **posting node's** assignment selects the receiving filter, preserving the existing model. Rewiring uses the difference between the two nodes' opinions and the assignment of the **node changing its connection**, after any repulsion update.
+
+Functions are sampled when configured; each repeated function is sampled once per grid point per setter call. C uses the table's interpolation method during simulation, with linear interpolation as the default. Choose the grid resolution to suit the function; this approximates its curve. Changing a captured parameter requires configuring the function again. `phi` still applies to native cosine filters, and does not alter sampled probabilities. These functions cannot depend on changing simulation state or time during the C loop.
+
+When `receiving_filter=doces.CUSTOM` and `phi` is nonzero, DOCES reports `doces.FilterParameterWarning` once per receiving-filter configuration if it contains a sampled function/table and **none** of its node assignments uses the native `COSINE` or `STRETCHED_HALF_COSINE` filter. In that case, simulation-time `phi` has no effect. Include the parameter in the sampled function and call `set_receiving_filter` again when its value changes:
+
+```python
+custom_phi = 0.25
+receiving = doces.ProbabilityTable.from_function(
+    lambda difference: np.cos(np.pi * difference / 2 + custom_phi) ** 2,
+    grid,
+)
+od.set_receiving_filter(receiving)
+```
+
+No warning is shown for `phi=0`, or when at least one node uses native `COSINE` or `STRETCHED_HALF_COSINE`, because `phi` affects that part of the mixed configuration. Native `UNIFORM`, `HALF_COSINE`, and `REVERSED_HALF_COSINE` do not use `phi`. To suppress this specific warning when the behavior is intentional:
+
+```python
+import warnings
+warnings.filterwarnings("ignore", category=doces.FilterParameterWarning)
+```
+
+Both `ProbabilityTable` and `ProbabilityTable.from_function` accept `interpolation="linear"` or `interpolation="previous"`. Linear interpolation joins neighboring samples with a straight line. Previous interpolation holds each sample's probability until the next knot; at an exact knot, that knot's probability applies, including the final endpoint. Include a step's threshold in the grid to represent it exactly:
+
+```python
+step = doces.ProbabilityTable(
+    [0.0, 0.5, 2.0], [1.0, 0.0, 0.0], interpolation="previous"
+)
+od.set_posting_filter(step)  # 1 for difference < 0.5; 0 otherwise
+```
+
+Each table chooses its own interpolation method, so per-node lists can mix both modes for posting, receiving, or rewiring. Direct callables passed to setters use linear interpolation; use `ProbabilityTable.from_function(..., interpolation="previous")` to sample a step function. Queries outside a table's domain remain errors in either mode.
+
+Tables require at least two finite, strictly increasing, nonnegative differences and matching probabilities in `[0, 1]`. Active tables must cover differences from zero through `max_opinion - min_opinion` (`[0, 2]` for the defaults), and any wider range needed by retained opinions or posts when resuming. Invalid tables or sampled results are rejected before replacing the configuration; insufficient coverage is rejected before simulation changes state. Tables own copies of their arrays, and C owns its own copies too.
+
+Use `CUSTOM` in `simulate_dynamics` to activate configured posting and receiving filters. Selecting a global built-in replaces that role's configuration, as with the existing integer-array setters; configure it again before returning to `CUSTOM`. The rewiring configuration persists across simulation calls. `rewire=True` uses it, and `rewire=False` prevents **all rewiring, including stubborn nodes**. This fixes the previous stubborn-node exception to `rewire=False`; seeded trajectories involving that bug can therefore change.
+
+By default, `rewire=True` retains the original probability: zero for differences `d <= 1`, and `cos(pi*d/2)**2` otherwise. It is also available as `doces.REVERSED_HALF_COSINE` (6). Calling `od.set_rewiring_filter()` restores this default with the original random draws. Custom rewiring probabilities keep the existing conditions for considering rewiring and the existing selection of a replacement connection.
+
+See the runnable [custom filters tutorial](docs/tutorial/custom_filters.py) for per-node functions and a check that `rewire=False` keeps the network fixed with stubborn nodes.
+
 # Tested OS
 
 Linux (Debian and Ubuntu), MacOS, and Windows
@@ -112,6 +171,15 @@ DOCES combines high-performance C code for computational efficiency with Python 
 <div align="center">
   <img src="https://raw.githubusercontent.com/hfarruda/doces/main/.github/figures/diagram.png" alt="DOCES Architecture" style="width:90%;">
 </div>
+
+# Optional Conda Environment
+
+To use the optional Conda environment provided in this repository, run the following commands from the repository root:
+
+```bash
+conda env create -f environment.yml
+conda activate doces
+```
 
 # Citation Request
 
@@ -134,4 +202,8 @@ The dynamics for directed networks, or with the use of particular types of users
 
 The dynamics with feeds (innovation parameter `mu < 1`) is cited as follows:
 
-- Kleber Andrade Oliveira, Henrique Ferraz de Arruda, and Yamir Moreno. "Mechanistic interplay between information spreading and opinion polarization." arXiv preprint arXiv:2410.17151 (2024).
+- Kleber Andrade Oliveira, Henrique Ferraz de Arruda, and Yamir Moreno. "Mechanistic interplay between information spreading and opinion polarization." PNAS Nexus (2026).
+
+# Coding Assistant Disclaimer
+
+Starting with version v0.1.0, Codex is used as a coding assistant in the development of this library.

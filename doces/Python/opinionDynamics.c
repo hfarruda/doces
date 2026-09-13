@@ -30,10 +30,14 @@ SOFTWARE.
 #include "documentation.h"
 #include <dynamics.h>
 #include <Python.h>
+#include <float.h>
+#include <string.h>
 // #include <pthread.h>
 
 // #define NO_IMPORT_ARRAY
 #define PY_ARRAY_UNIQUE_SYMBOL simulator_ARRAY_API
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#define NPY_TARGET_VERSION NPY_2_0_API_VERSION
 #include <numpy/arrayobject.h>
 
 
@@ -99,7 +103,7 @@ pyvector_to_Carrayptrs(PyArrayObject *arrayin)
 static int
 not_FLOATvector(PyArrayObject *vec)
 {
-	if (vec->descr->type_num != NPY_FLOAT) {
+	if (PyArray_TYPE(vec) != NPY_FLOAT) {
 		PyErr_SetString(PyExc_ValueError,
 						"In not_FLOATvector: array must be of "
 						"type FLOAT and 1 dimensional (n).");
@@ -114,7 +118,7 @@ not_FLOATvector(PyArrayObject *vec)
 static int
 not_intvector(PyArrayObject *vec)
 {
-	if (vec->descr->type_num != NPY_UINT64) {
+	if (PyArray_TYPE(vec) != NPY_UINT64) {
 		PyErr_SetString(
 			PyExc_ValueError,
 			"In not_intvector: array must be of type Long and 1 dimensional (n).");
@@ -133,10 +137,269 @@ typedef struct _PyDynamics{//Colocar aqui as variáveis que seriam globais
 	char receivingFilterType;
 	char *postingFilterTypes;
 	char *receivingFilterTypes;
+	FilterConfiguration *postingConfiguration;
+	FilterConfiguration *receivingConfiguration;
+	FilterConfiguration *rewiringConfiguration;
 	bool *stubborn;
 	FLOAT *b;
 	bool verbose;
 } PyDynamics;
+
+static void freeFilterConfiguration(FilterConfiguration **configuration){
+	FilterConfiguration *value = *configuration;
+	if (!value)
+		return;
+	if (value->tables){
+		for (size_t i = 0; i < value->tableCount; i++){
+			free(value->tables[i].differences);
+			free(value->tables[i].probabilities);
+		}
+	}
+	free(value->tables);
+	free(value->nodeFilters);
+	free(value);
+	*configuration = NULL;
+}
+
+/* Validate and copy everything before replacing an instance's configuration.
+ * The engine owns plain C arrays and never holds Python/callable references. */
+static PyObject *PySetFilterConfiguration(PyDynamics *self, PyObject *args){
+	const char *role;
+	PyObject *selectorsObject, *tablesObject;
+	PyArrayObject *selectors = NULL, *differences = NULL, *probabilities = NULL;
+	PyObject *tables = NULL, *pair = NULL;
+	FilterConfiguration *configuration = NULL;
+	FilterConfiguration **destination;
+	char **legacyTypes = NULL, *legacyType = NULL, *newTypes = NULL;
+	if (!PyArg_ParseTuple(args, "sOO", &role, &selectorsObject, &tablesObject))
+		return NULL;
+	if (!self->network){
+		PyErr_SetString(PyExc_TypeError, "Set the network before configuring filters.");
+		return NULL;
+	}
+	if (strcmp(role, "posting") == 0){
+		destination = &self->postingConfiguration;
+		legacyTypes = &self->postingFilterTypes;
+		legacyType = &self->postingFilterType;
+	}else if (strcmp(role, "receiving") == 0){
+		destination = &self->receivingConfiguration;
+		legacyTypes = &self->receivingFilterTypes;
+		legacyType = &self->receivingFilterType;
+	}else if (strcmp(role, "rewiring") == 0){
+		destination = &self->rewiringConfiguration;
+	}else{
+		PyErr_SetString(PyExc_ValueError, "Unknown filter role.");
+		return NULL;
+	}
+	selectors = convertToIntegerArray(selectorsObject, 1, 1);
+	if (!selectors)
+		goto failure;
+	if (PyArray_SIZE(selectors) != self->network->vCount){
+		PyErr_SetString(PyExc_ValueError, "Filter sequence length must match vertex_count.");
+		goto failure;
+	}
+	tables = PySequence_Fast(tablesObject, "tables must be a sequence");
+	if (!tables)
+		goto failure;
+	configuration = calloc(1, sizeof(FilterConfiguration));
+	if (!configuration)
+		goto memory_failure;
+	configuration->tableCount = (size_t) PySequence_Fast_GET_SIZE(tables);
+	if (configuration->tableCount > SIZE_MAX / sizeof(ProbabilityTable))
+		goto memory_failure;
+	if (configuration->tableCount){
+		configuration->tables = calloc(configuration->tableCount, sizeof(ProbabilityTable));
+		if (!configuration->tables)
+			goto memory_failure;
+	}
+	for (size_t i = 0; i < configuration->tableCount; i++){
+		pair = PySequence_Fast(PySequence_Fast_GET_ITEM(tables, i), "Each table must contain differences and probabilities.");
+		if (!pair)
+			goto failure;
+		Py_ssize_t pairSize = PySequence_Fast_GET_SIZE(pair);
+		if (pairSize != 2 && pairSize != 3){
+			PyErr_SetString(PyExc_ValueError, "Each table must contain two arrays and an optional interpolation method.");
+			goto failure;
+		}
+		ProbabilityTable *table = &configuration->tables[i];
+		/* Existing two-array payloads retain linear interpolation. */
+		table->interpolation = INTERPOLATION_LINEAR;
+		if (pairSize == 3){
+			PyObject *method = PySequence_Fast_GET_ITEM(pair, 2);
+			if (PyUnicode_Check(method) && PyUnicode_CompareWithASCIIString(method, "linear") == 0)
+				table->interpolation = INTERPOLATION_LINEAR;
+			else if (PyUnicode_Check(method) && PyUnicode_CompareWithASCIIString(method, "previous") == 0)
+				table->interpolation = INTERPOLATION_PREVIOUS;
+			else{
+				PyErr_SetString(PyExc_ValueError, "interpolation must be 'linear' or 'previous'");
+				goto failure;
+			}
+		}
+		differences = convertToDoubleArray(PySequence_Fast_GET_ITEM(pair, 0), 1, 1);
+		if (!differences)
+			goto failure;
+		probabilities = convertToDoubleArray(PySequence_Fast_GET_ITEM(pair, 1), 1, 1);
+		if (!probabilities)
+			goto failure;
+		npy_intp size = PyArray_SIZE(differences);
+		if (size < 2 || size != PyArray_SIZE(probabilities)){
+			PyErr_SetString(PyExc_ValueError, "Table arrays must have equal lengths of at least two.");
+			goto failure;
+		}
+		double *x = PyArray_DATA(differences), *p = PyArray_DATA(probabilities);
+		for (npy_intp j = 0; j < size; j++){
+			if (!isfinite(x[j]) || x[j] < 0 || (j && x[j] <= x[j-1])){
+				PyErr_SetString(PyExc_ValueError, "Differences must be finite, nonnegative and strictly increasing.");
+				goto failure;
+			}
+			if (!isfinite(p[j]) || p[j] < 0 || p[j] > 1){
+				PyErr_SetString(PyExc_ValueError, "Probabilities must be finite and within [0, 1].");
+				goto failure;
+			}
+		}
+		if ((size_t) size > SIZE_MAX / sizeof(double))
+			goto memory_failure;
+		table->size = (size_t) size;
+		table->differences = malloc(table->size * sizeof(double));
+		table->probabilities = malloc(table->size * sizeof(double));
+		if (!table->differences || !table->probabilities)
+			goto memory_failure;
+		memcpy(table->differences, x, table->size * sizeof(double));
+		memcpy(table->probabilities, p, table->size * sizeof(double));
+		Py_CLEAR(differences);
+		Py_CLEAR(probabilities);
+		Py_CLEAR(pair);
+	}
+	size_t count = self->network->vCount;
+	if (count > SIZE_MAX / sizeof(int64_t))
+		goto memory_failure;
+	configuration->nodeFilters = malloc((count ? count : 1) * sizeof(int64_t));
+	if (!configuration->nodeFilters)
+		goto memory_failure;
+	if (legacyTypes){
+		newTypes = malloc(count ? count : 1);
+		if (!newTypes)
+			goto memory_failure;
+	}
+	npy_int64 *ids = PyArray_DATA(selectors);
+	for (size_t i = 0; i < count; i++){
+		int64_t id = ids[i];
+		if ((id >= 0 && id != COSINE && id != STRETCHED_HALF_COSINE &&
+			 id != UNIFORM && id != HALF_COSINE && id != REVERSED_HALF_COSINE) ||
+			(id < 0 && (uint64_t) (-(id + 1)) >= configuration->tableCount)){
+			PyErr_SetString(PyExc_ValueError, "Invalid built-in filter or table index.");
+			goto failure;
+		}
+		configuration->nodeFilters[i] = id;
+		if (newTypes)
+			newTypes[i] = id >= 0 ? (char) id : UNIFORM;
+	}
+	freeFilterConfiguration(destination);
+	*destination = configuration;
+	if (legacyTypes){
+		free(*legacyTypes);
+		*legacyTypes = newTypes;
+		*legacyType = CUSTOM;
+	}
+	Py_DECREF(selectors);
+	Py_DECREF(tables);
+	Py_RETURN_NONE;
+
+memory_failure:
+	PyErr_NoMemory();
+failure:
+	Py_XDECREF(selectors);
+	Py_XDECREF(tables);
+	Py_XDECREF(pair);
+	Py_XDECREF(differences);
+	Py_XDECREF(probabilities);
+	free(newTypes);
+	freeFilterConfiguration(&configuration);
+	return NULL;
+}
+
+static int extendFilterDomain(double value, double *lower, double *upper){
+	if (!isfinite(value)){
+		PyErr_SetString(PyExc_ValueError, "Sampled filters require finite opinions and post values.");
+		return 0;
+	}
+	if (value < *lower) *lower = value;
+	if (value > *upper) *upper = value;
+	return 1;
+}
+
+/* Check active tables before touching opinions, feeds, selectors, or the RNG.
+ * Existing posts/opinions can span an earlier simulation's opinion interval. */
+static int validateFilterDomains(PyDynamics *self, PyObject *bObject,
+		FLOAT minOpinion, FLOAT maxOpinion, FLOAT delta,
+		int postingFilter, int receivingFilter, int allowRewire){
+	const FilterConfiguration *configurations[] = {
+		postingFilter == CUSTOM ? self->postingConfiguration : NULL,
+		receivingFilter == CUSTOM ? self->receivingConfiguration : NULL,
+		allowRewire ? self->rewiringConfiguration : NULL
+	};
+	bool active = false;
+	for (size_t i = 0; i < 3; i++)
+		if (configurations[i] && configurations[i]->tableCount) active = true;
+	if (!active)
+		return 1;
+	double lower = minOpinion, upper = maxOpinion;
+	if (!isfinite(lower) || !isfinite(upper) || lower >= upper ||
+		!isfinite(delta) || delta < 0){
+		PyErr_SetString(PyExc_ValueError, "Sampled filters require finite min_opinion < max_opinion and nonnegative finite delta.");
+		return 0;
+	}
+	if (bObject){
+		#ifdef USE_FLOAT_32
+			PyArrayObject *opinions = convertToFLOATArray(bObject, 1, 1);
+		#else
+			PyArrayObject *opinions = convertToDoubleArray(bObject, 1, 1);
+		#endif
+		if (!opinions)
+			return 0;
+		if (PyArray_SIZE(opinions) != self->network->vCount){
+			Py_DECREF(opinions);
+			PyErr_SetString(PyExc_TypeError, "The list of opinions must match vertex_count.");
+			return 0;
+		}
+		FLOAT *values = PyArray_DATA(opinions);
+		for (npy_intp i = 0; i < PyArray_SIZE(opinions); i++){
+			if (!isfinite(values[i]) || values[i] < lower || values[i] > upper){
+				Py_DECREF(opinions);
+				PyErr_SetString(PyExc_ValueError, "Opinions must be finite and within the simulation interval.");
+				return 0;
+			}
+		}
+		Py_DECREF(opinions);
+	}else if (self->b){
+		for (unsigned int i = 0; i < self->network->vCount; i++)
+			if (!extendFilterDomain(self->b[i], &lower, &upper)) return 0;
+	}
+	if (self->postList){
+		for (unsigned long int i = 0; i < self->postList->numberOfPosts; i++)
+			if (!extendFilterDomain(self->postList->post[i].theta, &lower, &upper)) return 0;
+	}
+	double required = upper - lower;
+	#ifdef USE_FLOAT_32
+		double tolerance = 8 * FLT_EPSILON * fmax(1., required);
+		bool finiteDifference = required <= FLT_MAX;
+	#else
+		double tolerance = 8 * DBL_EPSILON * fmax(1., required);
+		bool finiteDifference = isfinite(required);
+	#endif
+	for (size_t i = 0; i < 3; i++){
+		if (!configurations[i]) continue;
+		for (size_t j = 0; j < configurations[i]->tableCount; j++){
+			const ProbabilityTable *table = &configurations[i]->tables[j];
+			if (!finiteDifference || table->differences[0] != 0. ||
+				table->differences[table->size - 1] + tolerance < required){
+				PyErr_SetString(PyExc_ValueError, "Active probability tables must cover differences from zero through the simulation interval, including retained opinions and posts.");
+				return 0;
+			}
+		}
+	}
+	return 1;
+}
 
 int PyDynamics_traverse(PyDynamics *self, visitproc visit, void *arg)
 {
@@ -152,12 +415,18 @@ int PyDynamics_clear(PyDynamics *self)
 
 void PyDynamics_dealloc(PyDynamics *self)
 {
+	freeFilterConfiguration(&self->postingConfiguration);
+	freeFilterConfiguration(&self->receivingConfiguration);
+	freeFilterConfiguration(&self->rewiringConfiguration);
 	Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
 static void PyDynamics_del(struct _object *self_obj) 
 {
 	PyDynamics *self = (PyDynamics *)self_obj; // Cast to your the type
+	freeFilterConfiguration(&self->postingConfiguration);
+	freeFilterConfiguration(&self->receivingConfiguration);
+	freeFilterConfiguration(&self->rewiringConfiguration);
 
 	if (self->verbose){
 		printf("Cleaning variables ...\n");
@@ -202,8 +471,11 @@ static void PyDynamics_del(struct _object *self_obj)
 		self->stubborn = NULL;
 	}
 
-	if (self->verbose)
+	if (self->verbose){
 		PROGRESS_BAR(7, 8);
+		printf("\n");
+		fflush(stdout);
+	}
 
 	return;
 }
@@ -297,6 +569,9 @@ int PyDynamics_init(PyDynamics *self, PyObject *args, PyObject *kwds){
 		printf("\nCreating the inverted Adj. list.\n");
 	}
 
+	freeFilterConfiguration(&self->postingConfiguration);
+	freeFilterConfiguration(&self->receivingConfiguration);
+	freeFilterConfiguration(&self->rewiringConfiguration);
 	self->network = malloc(sizeof(Network));
  	edgeList2Network(self->network , *edgeList, self->verbose);
 	if (self->verbose && self->network->vCount < 50) 
@@ -596,6 +871,14 @@ PyObject * PyDynamicsSimulateDynamics(PyDynamics *self, PyObject *args, PyObject
 	}
 	#endif
 
+	if (!self->network){
+		PyErr_SetString(PyExc_TypeError, "Set the network before executing the dynamics.");
+		return NULL;
+	}
+	if (!validateFilterDomains(self, bObject, minOpinion, maxOpinion, delta,
+			postingFilter, receivingFilter, allowRewire))
+		return NULL;
+
 	numberOfIterations = (unsigned long int) pyNumberOfIterations;
 	if (randSeed < 0){
 		randSeed = time(NULL);
@@ -732,6 +1015,10 @@ PyObject * PyDynamicsSimulateDynamics(PyDynamics *self, PyObject *args, PyObject
 
 	self->postingFilterType = postingFilter;
 	self->receivingFilterType = receivingFilter;
+	if (postingFilter != CUSTOM)
+		freeFilterConfiguration(&self->postingConfiguration);
+	if (receivingFilter != CUSTOM)
+		freeFilterConfiguration(&self->receivingConfiguration);
 
 	if (self->verbose){
 		printf("========================================\n");
@@ -785,7 +1072,8 @@ PyObject * PyDynamicsSimulateDynamics(PyDynamics *self, PyObject *args, PyObject
 
 	//Executing the dynamics
 	FLOAT phiPosting = 0.;//fixed value, but in futire we can change it.
-	self->rewiringsCount += simulate(self->b, self->network, self->feeds, self->postList, self->postingFilterTypes, self->receivingFilterTypes, self->stubborn, feedSize, mu, delta, phiPosting, phi, maxOpinion, minOpinion, (unsigned long int) numberOfIterations, self->executedIterations, rewire, self->verbose);
+	self->rewiringsCount += simulate(self->b, self->network, self->feeds, self->postList, self->postingFilterTypes, self->receivingFilterTypes, self->stubborn, feedSize, mu, delta, phiPosting, phi, maxOpinion, minOpinion, (unsigned long int) numberOfIterations, self->executedIterations, rewire, self->verbose,
+		self->postingConfiguration, self->receivingConfiguration, self->rewiringConfiguration);
 
 	//Setting the executed iterations
 	self->executedIterations += (unsigned long int) numberOfIterations;
@@ -854,6 +1142,7 @@ PyObject *PySetPostingFilter(PyDynamics *self, PyObject *args, PyObject *kwds){
 		self->postingFilterTypes[i] = (char) postingFilterData[i];
 	}
 	self->postingFilterType = CUSTOM;
+	freeFilterConfiguration(&self->postingConfiguration);
 
 	Py_XDECREF(postingFilterArray);
 	// Py_XDECREF(postingFilterData);
@@ -906,6 +1195,7 @@ PyObject *PySetReceivingFilter(PyDynamics *self, PyObject *args, PyObject *kwds)
 		self->receivingFilterTypes[i] = (char) receivingFilterData[i];
 	}
 	self->receivingFilterType = CUSTOM;
+	freeFilterConfiguration(&self->receivingConfiguration);
 
 	Py_XDECREF(ReceivingFilterArray);
 	// Py_XDECREF(receivingFilterData);
@@ -972,6 +1262,10 @@ PyObject *PyForceDealloc(PyDynamics *self){
 }
 
 static PyMethodDef PyDynamics_methods[] = {
+	{"_set_filter_configuration",
+	 (PyCFunction)PySetFilterConfiguration,
+	 METH_VARARGS,
+	 "Configure copied probability tables and per-node selectors."},
 	{"_simulate_dynamics",
 	 (PyCFunction)PyDynamicsSimulateDynamics,
 	 METH_VARARGS | METH_KEYWORDS,

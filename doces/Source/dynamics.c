@@ -29,8 +29,8 @@ bool drawRewire(FLOAT bOfTheSelectedNode, FLOAT neighborB){
     FLOAT probability = 0.;
     FLOAT drawnNumber = 0.;
     if (y > 1.){
-        probability = pow(cos(PI/2. * y), 2.);;
-        if (probability < drawRandomFLOATNumber()){
+        probability = pow(cos(PI/2. * y), 2.);
+        if (drawRandomFLOATNumber() < probability){
             return true;
         }
     }
@@ -52,10 +52,60 @@ FLOAT defineProbabilityFunction(FLOAT y, FLOAT phi, char functionType){
             else 
                 chosenProbability = 0.;
         break;
+        case REVERSED_HALF_COSINE:
+            if (y > 1.)
+                chosenProbability = pow(cos(PI/2. * y), 2.);
+            else
+                chosenProbability = 0.;
+        break;
         default: printf("ERROR (defineProbabilityFunction): unknown functionType: %u.\n", (unsigned int) functionType); 
         break;
     }
     return chosenProbability;
+}
+
+FLOAT evaluateFilter(FLOAT difference, FLOAT phi, const FilterConfiguration *configuration, unsigned int node){
+    int64_t selector = configuration->nodeFilters[node];
+    if (selector >= 0)
+        return defineProbabilityFunction(difference, phi, (char) selector);
+
+    const ProbabilityTable *table = &configuration->tables[(size_t) (-selector - 1)];
+    double value = (double) difference;
+    size_t lower = 0;
+    size_t upper = table->size - 1;
+
+    /* Coverage is validated before simulation; clamp endpoint rounding. */
+    if (value <= table->differences[lower])
+        return (FLOAT) table->probabilities[lower];
+    if (value >= table->differences[upper])
+        return (FLOAT) table->probabilities[upper];
+
+    while (upper - lower > 1){
+        size_t middle = lower + (upper - lower) / 2;
+        if (value < table->differences[middle])
+            upper = middle;
+        else
+            lower = middle;
+    }
+
+    if (table->interpolation == INTERPOLATION_PREVIOUS)
+        return (FLOAT) table->probabilities[lower];
+
+    double fraction = (value - table->differences[lower]) /
+                      (table->differences[upper] - table->differences[lower]);
+    return (FLOAT) (table->probabilities[lower] + fraction *
+                   (table->probabilities[upper] - table->probabilities[lower]));
+}
+
+static bool drawConfiguredRewire(FLOAT bOfTheSelectedNode, FLOAT neighborB,
+                                 const FilterConfiguration *configuration, unsigned int node){
+    /* Retain the original threshold and random draws for the default formula. */
+    if (configuration == NULL || configuration->nodeFilters[node] == REVERSED_HALF_COSINE)
+        return drawRewire(bOfTheSelectedNode, neighborB);
+
+    FLOAT difference = (FLOAT) fabs(bOfTheSelectedNode - neighborB);
+    FLOAT probability = evaluateFilter(difference, 0., configuration, node);
+    return drawRandomFLOATNumber() < probability;
 }
 
 FLOAT postingFilter(FLOAT theta, FLOAT b, FLOAT phi, char probabilityFunction){
@@ -154,6 +204,8 @@ void printProbabilityTypeName(char probType){
         break;
         case CUSTOM: printf("CUSTOM");
         break;
+        case REVERSED_HALF_COSINE: printf("REVERSED_HALF_COSINE");
+        break;
         default: printf("\nERROR: unknown prob. type.\n"); 
         break;
     }
@@ -177,7 +229,10 @@ unsigned long int simulate(FLOAT *b, //The opinions change here
               unsigned long int nIterations, 
               unsigned long int firstIteration,
               bool rewire,
-              bool verbose){
+              bool verbose,
+              const FilterConfiguration *postingConfiguration,
+              const FilterConfiguration *receivingConfiguration,
+              const FilterConfiguration *rewiringConfiguration){
     //defining variables
     unsigned int selectedNode = 0;
     unsigned long int postId = 0;
@@ -221,7 +276,10 @@ unsigned long int simulate(FLOAT *b, //The opinions change here
             }
         }
         if (thereIsPost == true || isNewPost == true){
-            postingFilterProbability = postingFilter(theta, bOfTheSelectedNode, phiPosting, postingFilterTypes[selectedNode]); 
+            if (postingConfiguration == NULL)
+                postingFilterProbability = postingFilter(theta, bOfTheSelectedNode, phiPosting, postingFilterTypes[selectedNode]);
+            else
+                postingFilterProbability = evaluateFilter((FLOAT) fabs(theta - bOfTheSelectedNode), phiPosting, postingConfiguration, selectedNode);
 
             if (drawRandomFLOATNumber() < postingFilterProbability){
                 if (isNewPost == true){
@@ -234,7 +292,12 @@ unsigned long int simulate(FLOAT *b, //The opinions change here
                 for (unsigned int neighborPos = 0; neighborPos < network->neighborsCount[selectedNode]; neighborPos++){
                     neighborIndex = network->invertedAdjlist[selectedNode][neighborPos];
                     neighborB = b[neighborIndex];
-                    if (drawRandomFLOATNumber() < receivingFilter(bOfTheSelectedNode, neighborB, phiReceiving, receivingFilterTypes[selectedNode])){
+                    FLOAT receivingFilterProbability;
+                    if (receivingConfiguration == NULL)
+                        receivingFilterProbability = receivingFilter(bOfTheSelectedNode, neighborB, phiReceiving, receivingFilterTypes[selectedNode]);
+                    else
+                        receivingFilterProbability = evaluateFilter((FLOAT) fabs(bOfTheSelectedNode - neighborB), phiReceiving, receivingConfiguration, selectedNode);
+                    if (drawRandomFLOATNumber() < receivingFilterProbability){
                         //only for the users that receive
                         if (postInFeed(feeds, neighborIndex, postId) == false){
                             incrementPostedCount(postList, postId);
@@ -248,16 +311,16 @@ unsigned long int simulate(FLOAT *b, //The opinions change here
                             else{
                                 neighborB = repulsion(neighborB, theta, delta, minOpinion, maxOpinion);
                                 if (rewire){
-                                    if (drawRewire(bOfTheSelectedNode, neighborB)){
+                                    if (drawConfiguredRewire(bOfTheSelectedNode, neighborB, rewiringConfiguration, (unsigned int) neighborIndex)){
                                         rewireConnectionToRandom(network, selectedNode, neighborIndex);
                                         rewiringsCount ++;
                                     }
                                 }
                             }
                             b[neighborIndex] = neighborB;
-                        }else{//stubborn can rewire even without changing opinion
+                        }else if (rewire){//stubborn can rewire even without changing opinion
                             if (drawRandomFLOATNumber() > csi(theta, neighborB, minOpinion, maxOpinion))//this is the condition for repulsion
-                                if (drawRewire(bOfTheSelectedNode, neighborB)){
+                                if (drawConfiguredRewire(bOfTheSelectedNode, neighborB, rewiringConfiguration, (unsigned int) neighborIndex)){
                                     rewireConnectionToRandom(network, selectedNode, neighborIndex);
                                     rewiringsCount ++;
                                 }
@@ -273,5 +336,4 @@ unsigned long int simulate(FLOAT *b, //The opinions change here
     
     return rewiringsCount;
 }
-
 

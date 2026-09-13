@@ -24,6 +24,8 @@ SOFTWARE.
 
 #include "post.h"
 #include "utils.h"
+#include <stddef.h>
+#include <stdint.h>
 
 // Posting and receiving probabilities
 #define COSINE 0
@@ -32,9 +34,30 @@ SOFTWARE.
 #define HALF_COSINE 3
 #define RANDOM_DISTR 4
 #define CUSTOM 5
+#define REVERSED_HALF_COSINE 6
+
+typedef enum {
+    INTERPOLATION_LINEAR = 0,
+    INTERPOLATION_PREVIOUS = 1
+} InterpolationMethod;
+
+typedef struct {
+    size_t size;
+    double *differences;
+    double *probabilities;
+    InterpolationMethod interpolation;
+} ProbabilityTable;
+
+typedef struct {
+    size_t tableCount;
+    ProbabilityTable *tables;
+    /* Built-in identifiers, or -(table index + 1) for sampled functions. */
+    int64_t *nodeFilters;
+} FilterConfiguration;
 
 bool drawRewire(FLOAT bOfTheSelectedNode, FLOAT neighborB);
 FLOAT defineProbabilityFunction(FLOAT y, FLOAT phi, char transmissionType);
+FLOAT evaluateFilter(FLOAT difference, FLOAT phi, const FilterConfiguration *configuration, unsigned int node);
 FLOAT postingFilter(FLOAT theta, FLOAT b, FLOAT phi, char probabilityFunction);
 FLOAT receivingFilter(FLOAT b, FLOAT neighborB, FLOAT phi, char probabilityFunction);
 FLOAT attraction(FLOAT b, FLOAT theta, FLOAT change);
@@ -61,7 +84,10 @@ unsigned long int simulate( FLOAT *b, //The opinions change here
                             unsigned long int nIterations, 
                             unsigned long int firstIteration,
                             bool rewire,
-                            bool verbose);
+                            bool verbose,
+                            const FilterConfiguration *postingConfiguration,
+                            const FilterConfiguration *receivingConfiguration,
+                            const FilterConfiguration *rewiringConfiguration);
 
 //Transmission probaiblity -> postingFilter
 //Distribution probability -> receivingFilter

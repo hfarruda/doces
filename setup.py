@@ -28,6 +28,7 @@ SOFTWARE.
 
 import setuptools
 from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
 import os.path
 import platform
 import sys
@@ -36,8 +37,6 @@ print("Building on:", sys.version)
 
 with open("requirements.txt", "r", encoding="utf8") as fh:
     requirements = fh.readlines()
-
-enable_parallelism = False #False, because this version of DOCES is not implemented in parallel.
 
 extra_options = []
 extra_link_options = []
@@ -58,8 +57,6 @@ compiler_options = [
 
 if(platform.system()=="Darwin"):
     extra_options = ["-D OSX"]
-    if(enable_parallelism):
-        extra_options += ["-DCV_USE_LIBDISPATCH=1"]
 elif(platform.system()=="Windows"):
     extra_options += ["/D WIN32"]
     extra_options += ["/D __WIN32__"]
@@ -68,9 +65,6 @@ elif(platform.system()=="Windows"):
                 "/Wall",
                 "/O2",
             ]
-    if(enable_parallelism):
-        extra_options+=["/D CV_USE_OPENMP=1"]
-        extra_options+=["/openmp"]
     
     if("VCPKG_INSTALLATION_ROOT" in os.environ):
         extra_includes_paths += [os.path.join(os.environ["VCPKG_INSTALLATION_ROOT"], "installed", "x64-windows-static","include")]
@@ -78,19 +72,31 @@ elif(platform.system()=="Windows"):
 
 elif(platform.system()=="Linux"):
     extra_options = ["-D Linux","-D_GNU_SOURCE=1"]
-    if(enable_parallelism):
-        extra_options += ["-DCV_USE_OPENMP=1","-fopenmp"]
-        extra_link_options+=["-lgomp"]
-else:
-    if(enable_parallelism):
-        extra_options += ["-DCV_USE_OPENMP=1","-fopenmp"]
-        extra_link_options+=["-lgomp"]
 
 # WORKAROUND: https://stackoverflow.com/questions/54117786/add-numpy-get-include-argument-to-setuptools-without-preinstalled-numpy
 class get_numpy_include(object):
     def __str__(self):
             import numpy
             return numpy.get_include()
+
+class BuildExt(build_ext):
+    def build_extensions(self):
+        if platform.system() == "Darwin" and self.compiler.compiler_type == "unix":
+            # Conda can repeat the same rpath in LDSHARED and LDFLAGS.
+            for name in ("linker_so", "linker_so_cxx"):
+                flags = getattr(self.compiler, name, None)
+                if flags is None:
+                    continue
+                seen = set()
+                unique_flags = []
+                for flag in flags:
+                    if flag.startswith("-Wl,-rpath,") and flag.count(",") == 2:
+                        if flag in seen:
+                            continue
+                        seen.add(flag)
+                    unique_flags.append(flag)
+                setattr(self.compiler, name, unique_flags)
+        super().build_extensions()
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -109,15 +115,20 @@ setup(
     author="Henrique F. de Arruda, Kleber A. Oliveira, and Yamir Moreno",
     author_email="h.f.arruda@gmail.com",
     install_requires=[req for req in requirements if req[:2] != "# "],
-    setup_requires=['wheel',"numpy"],
     description="DOCES is an experimental library to simulate opinion dynamics on complex networks",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/hfarruda/doces",
+    license_expression="MIT",
     packages=setuptools.find_packages(),
     classifiers=[
             "Programming Language :: Python :: 3",
-            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+            "Programming Language :: Python :: 3.11",
+            "Programming Language :: Python :: 3.12",
+            "Programming Language :: Python :: 3.13",
+            "Programming Language :: Python :: 3.14",
             "Operating System :: MacOS :: MacOS X",
             "Operating System :: Microsoft :: Windows",
             "Operating System :: POSIX :: Linux",
@@ -126,7 +137,8 @@ setup(
             "Topic :: Scientific/Engineering :: Physics",
             "Intended Audience :: Science/Research"
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.9',
+    cmdclass={"build_ext": BuildExt},
     ext_modules = [
         Extension(
             package_name + "_core",

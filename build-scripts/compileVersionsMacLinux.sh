@@ -1,19 +1,13 @@
 #!/usr/bin/env bash
-
-eval "$(conda shell.bash hook)"
-
-conda create -y -n buildpy35 python=3.5 numpy
-conda activate buildpy35
-python setup.py sdist bdist_wheel
-
-conda create -y -n buildpy36 python=3.6 numpy
-conda activate buildpy36
-python setup.py sdist bdist_wheel
-
-conda create -y -n buildpy37 python=3.7 numpy
-conda activate buildpy37
-python setup.py sdist bdist_wheel
-
-conda create -y -n buildpy38 python=3.8 numpy
-conda activate buildpy38
-python setup.py sdist bdist_wheel
+set -euo pipefail
+project_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+# Pass version arguments to build a subset, e.g. bash compileVersionsMacLinux.sh 3.14.
+if [ "$#" -eq 0 ]; then
+    set -- 3.9 3.10 3.11 3.12 3.13 3.14
+fi
+for python_version in "$@"; do
+    build_root="$(mktemp -d "${TMPDIR:-/tmp}/doces-python.XXXXXX")"
+    conda create --yes --prefix "$build_root/python" --override-channels -c conda-forge "python=$python_version" pip
+    conda run --prefix "$build_root/python" --no-capture-output python "$project_dir/build-scripts/build_and_test.py" --output-dir "$project_dir/dist"
+    conda env remove --yes --prefix "$build_root/python"
+done
