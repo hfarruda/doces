@@ -84,11 +84,15 @@ The method outputs are a list `opinions` of continuous values between `min_opini
 - `verbose` - a boolean that allows the code to print details of each simulation;
 - `rand_seed` - an integer (positive value) used as a seed for random number generation;
 
-The filter functions are predefined in the library in the variables  
+The library provides the following filter functions and selection modes; in the formulas below, `d` is the absolute, unnormalized difference and `phi` is the receiving-filter parameter (zero for posting):
+
 - 0: `COSINE`: Controversial posting rule (eq. 1);
+- 1: `STRETCHED_HALF_COSINE`: Stretched squared cosine probability, `cos(pi*d/4 + phi)**2`;
 - 2: `UNIFORM`: Priority receiving rule;
 - 3: `HALF_COSINE` Aligned posting rule (eq. 2),  
-- 5:`CUSTOM` Allows different filters to be passed as a list of integers (with size equal to the number of agents).
+- 4: `RANDOM_DISTR`: Selection mode that randomly assigns `COSINE`, `UNIFORM`, or `HALF_COSINE` to each agent;
+- 5: `CUSTOM`: Selection mode that activates posting or receiving filters previously configured through their setters. Use one filter for all agents or a list with one entry per agent; entries can mix built-in identifiers, sampled Python functions, and `ProbabilityTable` objects (see [Python probability functions](#python-probability-functions));
+- 6: `REVERSED_HALF_COSINE`: Probability zero for `d <= 1`, and `cos(pi*d/2)**2` otherwise; the default rewiring probability.
 
 To use option 5, you can call the methods `set_posting_filter()` and `set_receiving_filter()`, as in the example below. Additionally, agents can be set as stubborn by passing a list with integers indicating those agents to the method `set_stubborn()`. Remember to do this before calling `simulate_dynamics()`.
 
